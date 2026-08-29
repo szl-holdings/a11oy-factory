@@ -8,7 +8,7 @@ app_port: 7860
 pinned: false
 license: apache-2.0
 suggested_hardware: cpu-basic
-short_description: Decision Cell Compiler. Lyte admitted. N1–N12 ROADMAP.
+short_description: Decision Cell Compiler. Lyte admitted. N1–N21 ROADMAP.
 ---
 
 # A11oy Factory
@@ -26,7 +26,7 @@ This is **not a second flagship**. It binds as an A11oy package.
 | Canonical flagship | [SZLHOLDINGS/a11oy](https://huggingface.co/spaces/SZLHOLDINGS/a11oy) |
 | a-11-oy.com | **not certified** |
 | Lyte | admitted STRUCTURAL-ONLY design-partner cell |
-| N1–N12 | named theatres, ROADMAP, compile returns BLOCKED |
+| N1–N21 | named theatres, ROADMAP (Energy UNAVAILABLE), compile returns BLOCKED |
 | Formulas | locked-8 · never grant authority |
 
 ## Named frontiers
@@ -48,6 +48,15 @@ Cite the leader. Take the job. Do not rehost the code.
 | N10 | Observe | Phoenix / LangSmith / Langfuse / DeepEval traces | ROADMAP |
 | N11 | Tune | Unsloth LoRA / QLoRA | ROADMAP |
 | N12 | Schema | Outlines / Instructor constrained generation | ROADMAP |
+| N13 | Energy | RAPL / NVML joule channel | UNAVAILABLE |
+| N14 | Tool | Anthropic MCP agent tools | ROADMAP |
+| N15 | Memory | Mem0 / Zep Graphiti | ROADMAP |
+| N16 | Eval | RAGAS / HELM / LMSYS Arena | ROADMAP |
+| N17 | Mesh | NVIDIA Dynamo / Ray Serve / llm-d | ROADMAP |
+| N18 | Route | LiteLLM / OpenRouter / RouteLLM | ROADMAP |
+| N19 | Cache | LMCache / Mooncake / GPTCache | ROADMAP |
+| N20 | Voice | LiveKit Agents / Cartesia / Deepgram | ROADMAP |
+| N21 | Sandbox | Daytona / E2B | ROADMAP |
 
 Sigstore stays STRUCTURAL-ONLY (UNSIGNED-honest hash, not Cosign).
 Energy stays UNAVAILABLE. Λ stays Conjecture 1.
@@ -58,14 +67,14 @@ Energy stays UNAVAILABLE. Λ stays Conjecture 1.
 
 - Admission freeze lifted for factory internals
 - `szl-holdings/nexus` classified `A11OY_INCUBATOR_PACKAGE`
-- Frontier N1–N12 named and open as ROADMAP theatres
+- Frontier N1–N21 named and open as ROADMAP theatres (Energy UNAVAILABLE)
 - Production certificate of a-11-oy.com remains closed
 - Hub writes go through Immune (`szl-holdings/immune` `secrets.HF_TOKEN`)
 
 ## Decision Cell Compiler
 
 Fail-closed organ of this factory. **Lyte** is the one admitted cell.
-**N1–N12** return `BLOCKED` / `ROADMAP`. Hash is UNSIGNED-honest, not a signature.
+**N1–N21** return `BLOCKED`. Energy returns `UNAVAILABLE`. Hash is UNSIGNED-honest, not a signature.
 
 ```bash
 python -m a11oy_factory compile --cell lyte

@@ -1,6 +1,6 @@
 """Admitted and ROADMAP decision cells. Fail closed on anything else.
 
-N1–N12 are named category-capture theatres. We cite the leader of the job
+N1–N21 are named category-capture theatres. We cite the leader of the job
 and take the job, not the code. Compiler refuses admission until doctrine
 names a cell LIVE. Lyte is the only admitted cell.
 """
@@ -208,6 +208,99 @@ FRONTIERS: tuple[Cell, ...] = (
             "is readable on the box. Compiler refuses admission of a fabricated joule."
         ),
     ),
+    _frontier(
+        14,
+        title="Tool",
+        organ="nervous",
+        job="agent tool protocol",
+        cite=(
+            "Anthropic Model Context Protocol (open standard for connecting agents to tools and data; "
+            "2026-07-28 spec is production-grade, stateless, HTTP-revalidatable)"
+        ),
+        szl="SENTRA-gated tools. Fail closed on unknown tools. Not an MCP rehost.",
+    ),
+    _frontier(
+        15,
+        title="Memory",
+        organ="brain",
+        job="persistent agent memory",
+        cite=(
+            "Mem0 (extract-and-retrieve, hybrid vector/graph/kv); "
+            "Zep Graphiti (temporal knowledge graph, LongMemEval leader)"
+        ),
+        szl="receipted memory with YAWAR lineage. Not a Mem0/Zep rehost. Letta stays cited on N9.",
+    ),
+    _frontier(
+        16,
+        title="Eval",
+        organ="immune",
+        job="offline evaluation",
+        cite=(
+            "RAGAS (RAG faithfulness/precision/recall); "
+            "Stanford HELM (holistic eval); "
+            "LMSYS Chatbot Arena (pairwise live votes)"
+        ),
+        szl="receipted eval. No self-grading as LIVE. Not a RAGAS/HELM/Arena rehost.",
+    ),
+    _frontier(
+        17,
+        title="Mesh",
+        organ="circulatory",
+        job="distributed inference",
+        cite=(
+            "NVIDIA Dynamo (disaggregated prefill/decode, orchestration above vLLM/SGLang/TRT-LLM); "
+            "Ray Serve LLM; "
+            "llm-d (Kubernetes-native distributed inference)"
+        ),
+        szl="receipted distributed overlay. Not a Dynamo/Ray/llm-d rehost.",
+    ),
+    _frontier(
+        18,
+        title="Route",
+        organ="circulatory",
+        job="LLM gateway and routing",
+        cite=(
+            "LiteLLM (open-source OpenAI-format proxy, fallback, spend, 100+ providers); "
+            "OpenRouter (hosted marketplace aggregator); "
+            "RouteLLM (LMSYS/Berkeley learned routing, not a gateway)"
+        ),
+        szl="Receipted gateway. Fail closed on unknown providers. Not a LiteLLM/OpenRouter rehost.",
+    ),
+    _frontier(
+        19,
+        title="Cache",
+        organ="circulatory",
+        job="prefix and semantic cache",
+        cite=(
+            "LMCache (KV offload for vLLM/SGLang); "
+            "Mooncake (KV transfer plane); "
+            "GPTCache (semantic response cache)"
+        ),
+        szl="Receipted reuse. A cache hit is not a new thought. Not an LMCache/Mooncake/GPTCache rehost.",
+    ),
+    _frontier(
+        20,
+        title="Voice",
+        organ="nervous",
+        job="realtime duplex voice",
+        cite=(
+            "LiveKit Agents (realtime rooms and agent worker); "
+            "Cartesia (low-latency TTS); "
+            "Deepgram (streaming STT)"
+        ),
+        szl="Receipted duplex. Audio is not authority. Not a LiveKit/Cartesia/Deepgram rehost.",
+    ),
+    _frontier(
+        21,
+        title="Sandbox",
+        organ="skeleton",
+        job="isolated agent code execution",
+        cite=(
+            "Daytona (agent-native sandboxed workspaces); "
+            "E2B (firecracker microVM code interpreter)"
+        ),
+        szl="SENTRA-gated exec. Fail closed on escape. Not a Daytona/E2B rehost.",
+    ),
 )
 
 CELLS: dict[str, Cell] = {LYTE.id: LYTE, **{c.id: c for c in FRONTIERS}}
@@ -238,7 +331,10 @@ _ALIASES: dict[str, str] = {
     "observability": "N10",
     "obsv": "N10",
     "observ": "N10",
-    "eval": "N10",
+    "eval": "N16",
+    "ragas": "N16",
+    "helm": "N16",
+    "arena": "N16",
     "tune": "N11",
     "qlora": "N11",
     "unsloth": "N11",
@@ -249,6 +345,28 @@ _ALIASES: dict[str, str] = {
     "joule": "N13",
     "rapl": "N13",
     "nvml": "N13",
+    "tool": "N14",
+    "mcp": "N14",
+    "memory": "N15",
+    "mem0": "N15",
+    "zep": "N15",
+    "mesh": "N17",
+    "dynamo": "N17",
+    "route": "N18",
+    "litellm": "N18",
+    "openrouter": "N18",
+    "gateway": "N18",
+    "cache": "N19",
+    "lmcache": "N19",
+    "mooncake": "N19",
+    "gptcache": "N19",
+    "voice": "N20",
+    "livekit": "N20",
+    "cartesia": "N20",
+    "deepgram": "N20",
+    "sandbox": "N21",
+    "daytona": "N21",
+    "e2b": "N21",
 }
 
 

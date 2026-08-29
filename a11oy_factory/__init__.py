@@ -18,4 +18,4 @@ __all__ = [
     "resolve_cell",
     "search_jobs",
 ]
-__version__ = "0.3.0"
+__version__ = "0.4.0"
