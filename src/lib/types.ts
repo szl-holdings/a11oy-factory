@@ -334,6 +334,12 @@ export interface HonestContract {
     health: "ok";
     signer: "ABSENT";
   };
+  organs: {
+    count: 25;
+    honesty: "LIVE";
+    admitted_public: false;
+    catalog: "/api/a11oy/v1/organs";
+  };
   truth: string;
   generated_at: string;
 }

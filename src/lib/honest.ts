@@ -3,10 +3,12 @@ import { currentAdmission, OWNER_ORDER, OWNER_CERT } from "@/lib/admission";
 import { profile, PROFILE_SHA256, snapshot } from "@/lib/data/registry";
 import { loadLedger } from "@/lib/ledger";
 import { validateProfile } from "@/lib/compiler";
+import { organCatalog } from "@/lib/organs";
 import { spacePlan } from "@/lib/spaces";
 
 export function buildHonest(): HonestContract {
   const admission = currentAdmission();
+  const organs = organCatalog();
   return {
     schema: "szl.a11oy-honest/v1",
     runtime: "a11oy-factory",
@@ -35,6 +37,12 @@ export function buildHonest(): HonestContract {
       http: OWNER_CERT.measured.http,
       health: OWNER_CERT.measured.health,
       signer: OWNER_CERT.measured.signer,
+    },
+    organs: {
+      count: 25,
+      honesty: organs.honesty,
+      admitted_public: false,
+      catalog: "/api/a11oy/v1/organs",
     },
     truth:
       "Owner order AO-2026-08-29-002 certifies a-11-oy.com as LIVE_PRODUCT_ORIGIN (HTTP 200, health ok, doctrine v11 LOCKED). N1–N25 organs execute in this factory with hashed receipts. Signer remains ABSENT — DSSE and FedRAMP are not certified. Factory runtime stays production_ready=false. Nexus is an A11oy incubator package. Lyte is the admitted protected design-partner cell.",

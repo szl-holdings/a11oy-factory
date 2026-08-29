@@ -14,6 +14,8 @@ import {
   type VerifyResult,
 } from "@/lib/ledger";
 import { loadOwnerApproval, verifyAdmissionReceipt } from "@/lib/admission";
+import { loadOrganLedger, verifyOrganReceipt } from "@/lib/organ-ledger";
+import type { OrganReceipt } from "@/lib/organs";
 import type { AdmissionReceipt, DecisionReceipt } from "@/lib/types";
 
 type Search = { hash?: string };
@@ -41,16 +43,31 @@ function VerifyPage() {
       setPaste(JSON.stringify(found, null, 2));
       return;
     }
-    const admission = loadOwnerApproval();
-    if (admission && admission.hash === hash) {
-      setPaste(JSON.stringify(admission, null, 2));
+    const organ = loadOrganLedger().entries.find((e) => e.hash === hash);
+    if (organ) {
+      setPaste(JSON.stringify(organ, null, 2));
+      return;
+    }
+    const owner = loadOwnerApproval();
+    if (owner && owner.hash === hash) {
+      setPaste(JSON.stringify(owner, null, 2));
     }
   }, [hash, ledger.entries]);
 
   async function onVerify() {
     setError(null);
     try {
-      const parsed = JSON.parse(paste) as DecisionReceipt | AdmissionReceipt;
+      const parsed = JSON.parse(paste) as DecisionReceipt | AdmissionReceipt | OrganReceipt;
+      if (parsed && "schema" in parsed && parsed.schema === "szl.organ-run/v1") {
+        const next = await verifyOrganReceipt(parsed as OrganReceipt);
+        setResult({
+          ok: next.ok,
+          findings: next.findings,
+          inLedger: next.inLedger,
+          chainOk: next.ok,
+        });
+        return;
+      }
       if (parsed && "schema" in parsed && parsed.schema === "szl.owner-admission-receipt/v1") {
         const next = await verifyAdmissionReceipt(parsed as AdmissionReceipt);
         setResult({
