@@ -33,28 +33,30 @@ def main() -> int:
     root = Path(os.environ.get("GITHUB_WORKSPACE") or ".").resolve()
     api = HfApi(token=token)
 
-    info = api.create_repo(
-        repo_id=REPO_ID,
-        repo_type="space",
-        private=True,
-        space_sdk="docker",
-        exist_ok=True,
-    )
-    print(f"space {REPO_ID} url={getattr(info, 'url', info)}")
-
     try:
-        api.update_repo_visibility(repo_id=REPO_ID, repo_type="space", private=True)
-    except Exception as exc:  # noqa: BLE001 — visibility is best-effort; create already requested private
-        print(f"visibility update skipped: {exc}")
+        existing = api.space_info(REPO_ID)
+        print(
+            f"space {REPO_ID} exists private={existing.private} sdk={existing.sdk}; "
+            "skip create_repo (daily Space create cap)"
+        )
+    except Exception:
+        info = api.create_repo(
+            repo_id=REPO_ID,
+            repo_type="space",
+            private=True,
+            space_sdk="docker",
+            exist_ok=True,
+        )
+        print(f"space {REPO_ID} created url={getattr(info, 'url', info)}")
 
     api.upload_folder(
         repo_id=REPO_ID,
         repo_type="space",
         folder_path=str(root),
-        commit_message="Bind protected A11oy factory Space (not a second flagship)",
+        commit_message="Sync A11oy factory Space from GitHub",
         ignore_patterns=IGNORE,
     )
-    print(f"uploaded {REPO_ID} as private docker space")
+    print(f"uploaded {REPO_ID}")
     return 0
 
 
