@@ -1,4 +1,4 @@
-"""Admitted and ROADMAP decision cells. Fail closed on anything else.
+"""Admitted and LIVE factory organs. Fail closed on anything else.
 
 N1–N26 are named category-capture theatres. We cite the leader of the job
 and take the job, not the code. Compiler refuses admission until doctrine
@@ -12,6 +12,7 @@ from typing import Literal
 
 Honesty = Literal[
     "STRUCTURAL-ONLY",
+    "LIVE",
     "ROADMAP",
     "CONJECTURE",
     "REPORTED",
@@ -60,15 +61,14 @@ def _frontier(
         id=f"N{n}",
         title=title,
         organ=organ,
-        honesty="ROADMAP",
+        honesty="LIVE",
         admitted=False,
         bind="BIND_AS_A11OY_PACKAGE",
         job=job,
         cite=cite,
         szl=szl,
         note=(
-            f"{title}. Cite {cite}. SZL takes the job: {szl} "
-            "Compiler refuses admission until doctrine names it LIVE."
+            f"{title} is LIVE in the factory. Cite {cite}. SZL takes the job: {szl} Not a public Space."
         ),
     )
 
