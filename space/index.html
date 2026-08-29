@@ -28,20 +28,22 @@
   <header>
     <p class="kicker">BIND_AS_A11OY_PACKAGE · not a second flagship</p>
     <h1>Decision Cell Compiler</h1>
-    <p class="muted">Lyte is the one admitted cell. N1–N21 are named category-capture theatres: compiling them returns <b>BLOCKED</b>. Energy is <b>UNAVAILABLE</b>. That is the product. We cite the leader of the job and take the job, not the code. Hash is UNSIGNED-honest. Λ = Conjecture 1.</p>
+    <p class="muted">Lyte is the one admitted cell. N1–N25 roadmaps are <b>STARTED</b> as fail-closed organs: compiling them still returns <b>BLOCKED</b>. Actuation halts. Energy is <b>UNAVAILABLE</b>. We cite the leader of the job and take the job, not the code. Hash is UNSIGNED-honest. Λ = Conjecture 1.</p>
     <p>
       <span class="chip">Doctrine v11</span>
       <span class="chip">Lyte STRUCTURAL-ONLY</span>
+      <span class="chip">Roadmaps STARTED · not LIVE</span>
       <span class="chip">N1 Serve · N2 Graph · N3 Guard · N4 Mosaic</span>
       <span class="chip">N5 Lattice · N6 Cover · N7 Quant · N8 Title</span>
       <span class="chip">N9 Retrieve · N10 Observe · N11 Tune · N12 Schema</span>
       <span class="chip">N13 Energy · N14 Tool · N15 Memory · N16 Eval · N17 Mesh</span>
       <span class="chip">N18 Route · N19 Cache · N20 Voice · N21 Sandbox</span>
+      <span class="chip">N22 Identity · N23 Rails · N24 Browser · N25 Policy</span>
     </p>
   </header>
   <main>
     <div class="row">
-      <input id="q" placeholder="search jobs — vllm, llamaindex, phoenix, unsloth, outlines, guidewire" aria-label="Search cited jobs"/>
+      <input id="q" placeholder="search jobs — vllm, mcp, spiffe, nemo, playwright, cedar" aria-label="Search cited jobs"/>
       <button class="run" id="searchBtn" type="button">Search catalog</button>
     </div>
     <div class="grid" id="cells"></div>
@@ -67,7 +69,8 @@
     }
     async function compile(id) {
       const r = await fetch("/api/compile", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({cell:id, signal:"factory bind"}) });
-      out.textContent = JSON.stringify(await r.json(), null, 2);
+      const a = await fetch("/api/act", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({cell:id}) });
+      out.textContent = JSON.stringify({compile: await r.json(), act: await a.json()}, null, 2);
     }
     async function search() {
       const q = document.getElementById("q").value;

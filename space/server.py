@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlparse
 from a11oy_factory.cells import FRONTIERS, LYTE
 from a11oy_factory.compiler import compile_cell
 from a11oy_factory.jobs import JOBS, search_jobs
+from a11oy_factory.organs import act, roadmap
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -33,7 +34,7 @@ def _cell_payload(cell) -> dict:
     return dict(cell.__dict__)
 
 
-JSON_PATHS = {"/health", "/healthz", "/api/cells", "/api/jobs", "/api/search", "/api/energy", "/readyz"}
+JSON_PATHS = {"/health", "/healthz", "/api/cells", "/api/jobs", "/api/search", "/api/energy", "/api/roadmap", "/readyz"}
 HTML_PATHS = {"/", "/index.html"}
 
 
@@ -81,6 +82,7 @@ class Handler(BaseHTTPRequestHandler):
                         "service": "a11oy-factory",
                         "bind": "BIND_AS_A11OY_PACKAGE",
                         "admitted": ["lyte"],
+                        "roadmap": "STARTED",
                         "frontiers": [
                             {"id": c.id, "title": c.title, "job": c.job, "honesty": c.honesty}
                             for c in FRONTIERS
@@ -111,6 +113,14 @@ class Handler(BaseHTTPRequestHandler):
             q = (qs.get("q") or [""])[0]
             self._send(200, json.dumps(search_jobs(q)).encode(), "application/json")
             return
+        if path == "/api/roadmap":
+            self._send(200, json.dumps(roadmap()).encode(), "application/json")
+            return
+        if path.startswith("/api/roadmap/"):
+            cell = path.rsplit("/", 1)[-1]
+            rec = act(cell, {})
+            self._send(200, json.dumps(rec).encode(), "application/json")
+            return
         self._send(404, b"not found", "text/plain")
 
     def do_POST(self) -> None:  # noqa: N802
@@ -127,6 +137,10 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/search":
             rec = search_jobs(str(data.get("q") or data.get("query") or ""))
+            self._send(200, json.dumps(rec).encode(), "application/json")
+            return
+        if path == "/api/act":
+            rec = act(str(data.get("cell") or ""), data.get("payload") if isinstance(data.get("payload"), dict) else data)
             self._send(200, json.dumps(rec).encode(), "application/json")
             return
         self._send(404, b"not found", "text/plain")

@@ -3,11 +3,12 @@
 BIND_AS_A11OY_PACKAGE. Not a second flagship.
 
 The Grok App Builder control plane stays at the repo root. This package is
-the fail-closed compiler that admits **Lyte** and refuses **N1–N21**.
+the fail-closed compiler that admits **Lyte** and refuses **N1–N25**.
 
-N1–N21 are named category-capture theatres. We cite the leader of the job
-and take the job, not the code. Compiling a frontier returns BLOCKED / ROADMAP
-(or UNAVAILABLE for Energy) until doctrine names that cell LIVE.
+N1–N25 are named category-capture theatres. Roadmaps are **STARTED** as
+fail-closed organs (`GET /api/roadmap`, `POST /api/act`). STARTED is not LIVE.
+Compiling a frontier still returns BLOCKED / ROADMAP (or UNAVAILABLE for Energy)
+until doctrine names that cell LIVE.
 
 | Surface | Honesty |
 |---|---|
@@ -33,7 +34,12 @@ and take the job, not the code. Compiling a frontier returns BLOCKED / ROADMAP
 | N18 Route (LiteLLM / OpenRouter / RouteLLM job) | ROADMAP |
 | N19 Cache (LMCache / Mooncake / GPTCache job) | ROADMAP |
 | N20 Voice (LiveKit / Cartesia / Deepgram job) | ROADMAP |
-| N21 Sandbox (Daytona / E2B job) | ROADMAP |
+| N21 Sandbox (Daytona / E2B job) | ROADMAP · STARTED |
+| N22 Identity (SPIFFE / Astrix NHI job) | ROADMAP · STARTED |
+| N23 Rails (NeMo Guardrails job) | ROADMAP · STARTED |
+| N24 Browser (Playwright / Stagehand / Browserbase job) | ROADMAP · STARTED |
+| N25 Policy (Cedar / OPA job) | ROADMAP · STARTED |
+| Organs `/api/act` | STARTED, fail-closed, never LIVE |
 | Sigstore / Cosign | STRUCTURAL-ONLY (hash is tamper-evident, not a signature) |
 | Λ uniqueness | Conjecture 1 OPEN |
 | Signing | UNSIGNED-honest SHA-256 |
@@ -42,12 +48,14 @@ and take the job, not the code. Compiling a frontier returns BLOCKED / ROADMAP
 python -m unittest discover -s tests -v
 python -m a11oy_factory compile --cell lyte
 python -m a11oy_factory compile --cell N9   # BLOCKED, ROADMAP
+python -m a11oy_factory roadmap
+python -m a11oy_factory act --cell N14 --payload '{"method":"tools/list"}'
 python -m a11oy_factory search --q vllm
-python -m a11oy_factory search --q llamaindex
-python -m a11oy_factory search --q phoenix
+python -m a11oy_factory search --q spiffe
+python -m a11oy_factory search --q nemo
 ```
 
-Space APIs: `GET /api/cells` · `GET /api/jobs` · `GET /api/search?q=` · `POST /api/compile`.
+Space APIs: `GET /api/cells` · `GET /api/jobs` · `GET /api/search?q=` · `GET /api/roadmap` · `POST /api/compile` · `POST /api/act`.
 
 Canonical flagship remains [szl-holdings/a11oy](https://github.com/szl-holdings/a11oy).
 This organ does not mint production signatures, run inference, or claim an ATO.

@@ -1,6 +1,6 @@
 """Admitted and ROADMAP decision cells. Fail closed on anything else.
 
-N1–N21 are named category-capture theatres. We cite the leader of the job
+N1–N25 are named category-capture theatres. We cite the leader of the job
 and take the job, not the code. Compiler refuses admission until doctrine
 names a cell LIVE. Lyte is the only admitted cell.
 """
@@ -301,6 +301,51 @@ FRONTIERS: tuple[Cell, ...] = (
         ),
         szl="SENTRA-gated exec. Fail closed on escape. Not a Daytona/E2B rehost.",
     ),
+    _frontier(
+        22,
+        title="Identity",
+        organ="skeleton",
+        job="non-human agent identity",
+        cite=(
+            "SPIFFE/SPIRE (workload SVID, not a person); "
+            "Astrix (NHI fingerprinting and agent policy, RSAC 2026)"
+        ),
+        szl="UNSIGNED-honest spiffe-shaped id. Not an SVID. Not a certificate. Not an Astrix rehost.",
+    ),
+    _frontier(
+        23,
+        title="Rails",
+        organ="immune",
+        job="conversation rails",
+        cite=(
+            "NVIDIA NeMo Guardrails (Colang dialog/input/output/retrieval/execution rails — "
+            "conversation flow, not a safety classifier; distinct from Llama Guard on N3)"
+        ),
+        szl="Topic rails as a state machine. Off-rail HALT. Not Colang. Not a NeMo rehost.",
+    ),
+    _frontier(
+        24,
+        title="Browser",
+        organ="nervous",
+        job="agent browser actuation",
+        cite=(
+            "Playwright (control loop); "
+            "Stagehand (Browserbase act/extract/observe); "
+            "Browserbase (managed Chromium)"
+        ),
+        szl="No actuation. Navigation refused. Not a Playwright/Stagehand/Browserbase rehost.",
+    ),
+    _frontier(
+        25,
+        title="Policy",
+        organ="immune",
+        job="authorization policy for tools",
+        cite=(
+            "AWS Cedar (policy-as-code authorization); "
+            "Open Policy Agent (Rego)"
+        ),
+        szl="SENTRA policy. Unknown action fail closed. Not a Cedar/OPA rehost.",
+    ),
 )
 
 CELLS: dict[str, Cell] = {LYTE.id: LYTE, **{c.id: c for c in FRONTIERS}}
@@ -367,6 +412,21 @@ _ALIASES: dict[str, str] = {
     "sandbox": "N21",
     "daytona": "N21",
     "e2b": "N21",
+    "identity": "N22",
+    "spiffe": "N22",
+    "spire": "N22",
+    "astrix": "N22",
+    "nhi": "N22",
+    "rails": "N23",
+    "nemo": "N23",
+    "colang": "N23",
+    "browser": "N24",
+    "playwright": "N24",
+    "stagehand": "N24",
+    "browserbase": "N24",
+    "policy": "N25",
+    "cedar": "N25",
+    "opa": "N25",
 }
 
 
