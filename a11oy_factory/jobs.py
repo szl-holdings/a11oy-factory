@@ -11,6 +11,43 @@ from dataclasses import asdict, dataclass
 
 from .cells import FRONTIERS, LYTE, Cell
 
+# Typo / shorthand → canonical needle. Search is catalog, not a live crawl.
+ALIASES: dict[str, str] = {
+    "vlm": "vllm",
+    "v-llm": "vllm",
+    "vlmm": "vllm",
+    "sgl": "sglang",
+    "langraph": "langgraph",
+    "lang graph": "langgraph",
+    "llama-guard": "llama guard",
+    "llamaguard": "llama guard",
+    "retrive": "retrieve",
+    "retriev": "retrieve",
+    "rag": "llamaindex",
+    "llama-index": "llamaindex",
+    "llama index": "llamaindex",
+    "memgpt": "letta",
+    "obsv": "observe",
+    "observ": "observe",
+    "observability": "phoenix",
+    "otel": "phoenix",
+    "opentelemetry": "phoenix",
+    "qlora": "unsloth",
+    "lora": "unsloth",
+    "finetune": "unsloth",
+    "fine-tune": "unsloth",
+    "json-mode": "outlines",
+    "jsonmode": "outlines",
+    "structured": "outlines",
+    "pydantic": "instructor",
+    "trt": "tensorrt",
+    "tensorrt-llm": "tensorrt",
+    "n9": "retrieve",
+    "n10": "observe",
+    "n11": "tune",
+    "n12": "schema",
+}
+
 
 @dataclass(frozen=True)
 class Job:
@@ -74,6 +111,18 @@ JOBS: tuple[Job, ...] = (
         admitted=False,
         take="Honest local DX path wrapping llama.cpp. CPU-honest until GPU is MEASURED.",
         refuse="Do not rehost Ollama. Do not claim GPU serve LIVE.",
+    ),
+    Job(
+        id="tensorrt",
+        title="Hardware-optimized serving",
+        leader="TensorRT-LLM",
+        url="https://github.com/NVIDIA/TensorRT-LLM",
+        organ="brain",
+        cell="N1",
+        honesty="ROADMAP",
+        admitted=False,
+        take="Receipted serve on measured NVIDIA hardware. Energy stays UNAVAILABLE until NVML.",
+        refuse="Do not rehost TensorRT-LLM. Do not fabricate GPU LIVE.",
     ),
     Job(
         id="langgraph",
@@ -160,6 +209,126 @@ JOBS: tuple[Job, ...] = (
         refuse="Do not rehost Zillow. szl-real-estate Hub vertical may be LIVE; this bind is not.",
     ),
     Job(
+        id="llamaindex",
+        title="Retrieval-augmented generation",
+        leader="LlamaIndex",
+        url="https://github.com/run-llama/llama_index",
+        organ="nervous",
+        cell="N9",
+        honesty="ROADMAP",
+        admitted=False,
+        take="Receipted retrieve. SENTRA on every chunk. Schema outside the weights.",
+        refuse="Do not rehost LlamaIndex, its indices, or its query engines.",
+    ),
+    Job(
+        id="haystack",
+        title="Production retrieval pipelines",
+        leader="Haystack",
+        url="https://github.com/deepset-ai/haystack",
+        organ="nervous",
+        cell="N9",
+        honesty="ROADMAP",
+        admitted=False,
+        take="Pipeline job under receipts. Fail closed on empty evidence.",
+        refuse="Do not rehost Haystack pipelines.",
+    ),
+    Job(
+        id="letta",
+        title="Persistent agent memory",
+        leader="Letta / MemGPT",
+        url="https://github.com/letta-ai/letta",
+        organ="nervous",
+        cell="N9",
+        honesty="ROADMAP",
+        admitted=False,
+        take="Memory as a receipted organ. Not a second brain without SENTRA.",
+        refuse="Do not rehost Letta or MemGPT.",
+    ),
+    Job(
+        id="phoenix",
+        title="OpenTelemetry LLM traces and evals",
+        leader="Arize Phoenix",
+        url="https://github.com/Arize-ai/phoenix",
+        organ="immune",
+        cell="N10",
+        honesty="ROADMAP",
+        admitted=False,
+        take="YAWAR receipt traces. Honest UNAVAILABLE over fabricated green.",
+        refuse="Do not rehost Phoenix. Phoenix is ELv2, not Apache-2.0.",
+    ),
+    Job(
+        id="langsmith",
+        title="LangChain agent traces",
+        leader="LangSmith",
+        url="https://www.langchain.com/langsmith",
+        organ="immune",
+        cell="N10",
+        honesty="ROADMAP",
+        admitted=False,
+        take="Trace every SENTRA edge. Receipt the cycle.",
+        refuse="Do not rehost LangSmith.",
+    ),
+    Job(
+        id="langfuse",
+        title="OSS LLM traces",
+        leader="Langfuse",
+        url="https://github.com/langfuse/langfuse",
+        organ="immune",
+        cell="N10",
+        honesty="ROADMAP",
+        admitted=False,
+        take="Self-hostable traces as YAWAR packets.",
+        refuse="Do not rehost Langfuse.",
+    ),
+    Job(
+        id="deepeval",
+        title="CI evaluation",
+        leader="DeepEval",
+        url="https://github.com/confident-ai/deepeval",
+        organ="immune",
+        cell="N10",
+        honesty="ROADMAP",
+        admitted=False,
+        take="Eval in CI with UNSIGNED-honest receipts. Never grade our own homework LIVE.",
+        refuse="Do not rehost DeepEval or claim eval LIVE.",
+    ),
+    Job(
+        id="unsloth",
+        title="Receipted QLoRA",
+        leader="Unsloth",
+        url="https://github.com/unslothai/unsloth",
+        organ="brain",
+        cell="N11",
+        honesty="ROADMAP",
+        admitted=False,
+        take="Fine-tunes only against LIVE weights with a receipt. GPU ROADMAP.",
+        refuse="No unreceipted QLoRA. Not an Unsloth rehost.",
+    ),
+    Job(
+        id="outlines",
+        title="Constrained decode",
+        leader="Outlines",
+        url="https://github.com/dottxt-ai/outlines",
+        organ="skeleton",
+        cell="N12",
+        honesty="ROADMAP",
+        admitted=False,
+        take="Finite-state schema outside the weights.",
+        refuse="Do not rehost Outlines or its FSMs.",
+    ),
+    Job(
+        id="instructor",
+        title="Pydantic structured outputs",
+        leader="Instructor",
+        url="https://github.com/instructor-ai/instructor",
+        organ="skeleton",
+        cell="N12",
+        honesty="ROADMAP",
+        admitted=False,
+        take="Typed receipts. Schema stays outside the weights.",
+        refuse="Do not rehost Instructor.",
+    ),
+    Job(
         id="sigstore",
         title="Keyless artifact signing",
         leader="Sigstore / Cosign",
@@ -182,18 +351,6 @@ JOBS: tuple[Job, ...] = (
         admitted=False,
         take="Energy remains UNAVAILABLE until NVML is MEASURED.",
         refuse="Do not fabricate joules. Do not clone Electricity Maps.",
-    ),
-    Job(
-        id="unsloth",
-        title="Receipted QLoRA",
-        leader="Unsloth",
-        url="https://github.com/unslothai/unsloth",
-        organ="brain",
-        cell="N1",
-        honesty="ROADMAP",
-        admitted=False,
-        take="Fine-tunes only against LIVE weights with a receipt.",
-        refuse="No unreceipted QLoRA. Not an Unsloth rehost.",
     ),
 )
 
@@ -219,11 +376,33 @@ def _cell_blob(cell: Cell) -> str:
     ).lower()
 
 
+def _needles(q: str) -> list[str]:
+    raw = (q or "").strip().lower()
+    if not raw:
+        return []
+    expanded = ALIASES.get(raw, raw)
+    out: list[str] = []
+    for n in (raw, expanded):
+        if n and n not in out:
+            out.append(n)
+    # Only tokenize an alias expansion (vlm → vllm stays one token).
+    # Never split "llama guard" into "llama"+"guard" — that hits Ollama.
+    if " " not in raw and " " in expanded:
+        for t in expanded.split():
+            if t and t not in out:
+                out.append(t)
+    return out
+
+
 def search_jobs(q: str) -> dict:
     """Local catalog search. Empty query returns the full table. Unknown query is empty hits, not an error."""
-    needle = (q or "").strip().lower()
-    jobs = [asdict(j) for j in JOBS if not needle or needle in _blob(j)]
-    cells = [c.__dict__ for c in (LYTE, *FRONTIERS) if not needle or needle in _cell_blob(c)]
+    needles = _needles(q)
+    jobs = [asdict(j) for j in JOBS if not needles or any(n in _blob(j) for n in needles)]
+    cells = [
+        c.__dict__
+        for c in (LYTE, *FRONTIERS)
+        if not needles or any(n in _cell_blob(c) for n in needles)
+    ]
     return {
         "query": q or "",
         "jobs": jobs,

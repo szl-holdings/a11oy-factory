@@ -3,9 +3,9 @@
 BIND_AS_A11OY_PACKAGE. Not a second flagship.
 
 The Grok App Builder control plane stays at the repo root. This package is
-the fail-closed compiler that admits **Lyte** and refuses **N1–N8**.
+the fail-closed compiler that admits **Lyte** and refuses **N1–N12**.
 
-N1–N8 are named category-capture theatres. We cite the leader of the job
+N1–N12 are named category-capture theatres. We cite the leader of the job
 and take the job, not the code. Compiling a frontier returns BLOCKED / ROADMAP
 until doctrine names that cell LIVE.
 
@@ -13,7 +13,7 @@ until doctrine names that cell LIVE.
 |---|---|
 | Decision Cell Compiler | LIVE, fail-closed |
 | Admitted Lyte cell | STRUCTURAL-ONLY |
-| N1 Serve (vLLM / SGLang / Ollama job) | ROADMAP |
+| N1 Serve (vLLM / SGLang / Ollama / TensorRT-LLM job) | ROADMAP |
 | N2 Graph (LangGraph job) | ROADMAP |
 | N3 Guard (Llama Guard job) | ROADMAP |
 | N4 Mosaic (MosaicML / Databricks job) | ROADMAP |
@@ -21,6 +21,10 @@ until doctrine names that cell LIVE.
 | N6 Cover (Guidewire P&C job) | ROADMAP |
 | N7 Quant (QuantConnect LEAN job) | ROADMAP |
 | N8 Title (Zillow / records job) | ROADMAP |
+| N9 Retrieve (LlamaIndex / Haystack / Letta job) | ROADMAP |
+| N10 Observe (Phoenix / LangSmith / Langfuse / DeepEval job) | ROADMAP |
+| N11 Tune (Unsloth QLoRA job) | ROADMAP |
+| N12 Schema (Outlines / Instructor job) | ROADMAP |
 | Sigstore / Cosign | STRUCTURAL-ONLY (hash is tamper-evident, not a signature) |
 | Energy | UNAVAILABLE |
 | Λ uniqueness | Conjecture 1 OPEN |
@@ -29,9 +33,10 @@ until doctrine names that cell LIVE.
 ```bash
 python -m unittest discover -s tests -v
 python -m a11oy_factory compile --cell lyte
-python -m a11oy_factory compile --cell N3   # BLOCKED, ROADMAP
+python -m a11oy_factory compile --cell N9   # BLOCKED, ROADMAP
 python -m a11oy_factory search --q vllm
-python -m a11oy_factory search --q guidewire
+python -m a11oy_factory search --q llamaindex
+python -m a11oy_factory search --q phoenix
 ```
 
 Space APIs: `GET /api/cells` · `GET /api/jobs` · `GET /api/search?q=` · `POST /api/compile`.
