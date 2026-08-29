@@ -415,6 +415,18 @@ JOBS: tuple[Job, ...] = (
         refuse="Do not clone Electricity Maps. Do not mint a green joule.",
     ),
     Job(
+        id="wrap",
+        title="Wrapped inference joule",
+        leader="szl-command-lab NVML wrap",
+        url="https://github.com/szl-holdings/szl-command-lab",
+        organ="nervous",
+        cell="N26",
+        honesty="REPORTED",
+        admitted=False,
+        take="Board energy during a wrapped SHA-256 kernel on command-lab. REPORTED here. MEASURED there.",
+        refuse="Do not fabricate joules. Do not claim MEASURED on this CPU factory. Do not elevate proven_trust.",
+    ),
+    Job(
         id="mcp",
         title="Agent tool protocol",
         leader="Anthropic MCP",
