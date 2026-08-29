@@ -1,0 +1,25 @@
+name: Sync Hugging Face Space
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Push protected Docker Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "HF_TOKEN is not set. Space cards stay PREPARED_NOT_LIVE. No Hub mutation."
+            exit 0
+          fi
+          echo "Target Space SZLHOLDINGS/a11oy-factory must stay protected. Do not pin."
+          git config user.name "szl-factory"
+          git config user.email "factory@szl-holdings"
+          git remote add hf "https://huggingface.co/spaces/SZLHOLDINGS/a11oy-factory" || true
+          git push "https://oauth2:${HF_TOKEN}@huggingface.co/spaces/SZLHOLDINGS/a11oy-factory" HEAD:main --force

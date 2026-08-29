@@ -1,0 +1,15 @@
+node_modules
+.output
+.vercel
+.nitro
+dist
+screenshots
+attachments
+artifacts
+.git
+public/__grok
+.grok/preview.log
+.grok/status
+.grok/skills
+.grok/references
+AGENTS.md

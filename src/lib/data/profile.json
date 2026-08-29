@@ -1,0 +1,50 @@
+{
+  "counts": {
+    "a11oy_routes_in_audit": 33,
+    "a11oy_spaces_route_displayed": 26,
+    "github_archived": 7,
+    "github_private": 5,
+    "github_public": 72,
+    "github_public_page_displayed": 58,
+    "github_repositories_authenticated": 77,
+    "hf_assets_in_audit": 99,
+    "hf_buckets": 1,
+    "hf_collections": 12,
+    "hf_datasets": 27,
+    "hf_kernels": 10,
+    "hf_models_dedicated_listing": 17,
+    "hf_models_org_front": 22,
+    "hf_spaces": 27,
+    "killinchu_routes_in_audit": 12,
+    "open_prs_authenticated": 3,
+    "vertical_cells": 7
+  },
+  "current_open_prs": [
+    {
+      "disposition": "QUALIFY_RELEASE_CONVERGENCE",
+      "number": 344,
+      "reason": "A documentation-only push may retrigger sync, but completion requires exact source/Hub/runtime readback and durable readiness; no LIVE/PROVED promotion.",
+      "repository": "szl-holdings/killinchu",
+      "source_url": "https://github.com/szl-holdings/killinchu/pull/344",
+      "title": "docs(status): retrigger hf-sync for hung Space probes"
+    },
+    {
+      "disposition": "QUALIFY_OR_SUPERSEDE_AFTER_REGISTRY",
+      "number": 487,
+      "reason": "Relock can repair source binding, but the organization card should ultimately be generated from the authoritative estate registry.",
+      "repository": "szl-holdings/.github",
+      "source_url": "https://github.com/szl-holdings/.github/pull/487",
+      "title": "chore(hf): relock SZLHOLDINGS organization card on push"
+    },
+    {
+      "disposition": "REBASE_REVIEW_AND_PROMOTE_IF_CURRENT",
+      "number": 486,
+      "reason": "This is the prerequisite control plane; it does not itself change live rulesets or certify production.",
+      "repository": "szl-holdings/.github",
+      "source_url": "https://github.com/szl-holdings/.github/pull/486",
+      "title": "feat(production): Production Readiness System v5 (PR-0 control plane)"
+    }
+  ],
+  "formula_bindings": [],
+  "vertical_cells": []
+}
