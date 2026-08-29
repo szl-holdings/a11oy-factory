@@ -15,5 +15,6 @@
     "paths": { "@/*": ["./src/*"] },
     "allowImportingTsExtensions": true
   },
-  "include": ["src", "server"]
+  "include": ["src"],
+  "exclude": ["src/router.tsx"]
 }
