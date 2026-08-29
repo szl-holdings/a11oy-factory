@@ -2,6 +2,7 @@ import unittest
 
 from a11oy_factory.cells import ADMITTED, FRONTIERS, LYTE
 from a11oy_factory.compiler import BLOCKED, compile_cell
+from a11oy_factory.jobs import JOBS, search_jobs
 
 
 class CompilerTests(unittest.TestCase):
@@ -15,12 +16,27 @@ class CompilerTests(unittest.TestCase):
         self.assertIsNone(rec.energy)
         self.assertEqual(len(rec.hash), 64)
 
-    def test_frontiers_are_blocked_roadmap(self):
+    def test_frontiers_are_named_and_blocked_roadmap(self):
         self.assertEqual(len(FRONTIERS), 8)
+        expected = {
+            "N1": "Serve",
+            "N2": "Graph",
+            "N3": "Guard",
+            "N4": "Mosaic",
+            "N5": "Lattice",
+            "N6": "Cover",
+            "N7": "Quant",
+            "N8": "Title",
+        }
         for cell in FRONTIERS:
+            self.assertEqual(cell.title, expected[cell.id])
+            self.assertFalse(cell.admitted)
+            self.assertTrue(cell.cite)
+            self.assertTrue(cell.szl)
             rec = compile_cell(cell.id)
             self.assertEqual(rec.decision, BLOCKED)
             self.assertEqual(rec.honesty_tier, "ROADMAP")
+            self.assertIn(cell.title, rec.note)
 
     def test_unknown_fails_closed(self):
         rec = compile_cell("not-a-cell")
@@ -34,6 +50,41 @@ class CompilerTests(unittest.TestCase):
     def test_lambda_never_proven(self):
         rec = compile_cell("lyte")
         self.assertEqual(rec.lambda_status, "Conjecture 1")
+
+    def test_search_cites_leaders_and_refuses_rehost(self):
+        vllm = search_jobs("vllm")
+        self.assertTrue(vllm["jobs"])
+        self.assertEqual(vllm["jobs"][0]["leader"], "vLLM")
+        self.assertIn("Do not rehost", vllm["jobs"][0]["refuse"])
+        self.assertEqual(vllm["cells"][0]["id"], "N1")
+        self.assertFalse(vllm["cells"][0]["admitted"])
+
+        graph = search_jobs("langgraph")
+        self.assertEqual(graph["jobs"][0]["cell"], "N2")
+
+        guard = search_jobs("llama guard")
+        self.assertEqual(guard["jobs"][0]["cell"], "N3")
+
+        cover = search_jobs("guidewire")
+        self.assertEqual(cover["jobs"][0]["cell"], "N6")
+
+        sig = search_jobs("sigstore")
+        self.assertEqual(sig["jobs"][0]["honesty"], "STRUCTURAL-ONLY")
+        self.assertEqual(sig["jobs"][0]["cell"], "")
+
+        energy = search_jobs("electricity")
+        self.assertEqual(energy["jobs"][0]["honesty"], "UNAVAILABLE")
+        self.assertIsNone(energy["energy"])
+
+    def test_search_empty_returns_catalog(self):
+        all_jobs = search_jobs("")
+        self.assertGreaterEqual(len(all_jobs["jobs"]), len(JOBS))
+        self.assertEqual(LYTE.id, "lyte")
+
+    def test_typo_tolerant_cell_ids(self):
+        rec = compile_cell("n1")
+        self.assertEqual(rec.cell, "N1")
+        self.assertEqual(rec.decision, BLOCKED)
 
 
 if __name__ == "__main__":
