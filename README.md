@@ -7,20 +7,23 @@ sdk: docker
 app_port: 7860
 pinned: false
 license: apache-2.0
-short_description: A11oy vertical factory control plane — Decision Cell Compiler, Lyte admitted, frontier N1–N8.
+suggested_hardware: cpu-basic
+short_description: Protected A11oy factory bind. Not a second flagship. Formulas never grant authority.
 ---
 
 # A11oy Factory
 
-Public source for the **A11oy vertical factory control plane**.
+Public **source** for the A11oy vertical factory control plane.
+Intended Hub Space: `SZLHOLDINGS/a11oy-factory` — **protected**, not a seventh public Space.
 
-This is **not a second flagship** and not a new product name. It binds as an A11oy package: one Decision Cell Compiler, seven vertical cells, owner-approved green light.
+This is **not a second flagship** and not a new product name. It binds as an A11oy package.
 
 | Surface | State |
 | --- | --- |
 | GitHub | [szl-holdings/a11oy-factory](https://github.com/szl-holdings/a11oy-factory) · public |
-| Hugging Face Space | `SZLHOLDINGS/a11oy-factory` · Docker prepared, **not live** until `HF_TOKEN` is set |
-| a-11-oy.com | **not certified** by this repository |
+| Hugging Face Space | `SZLHOLDINGS/a11oy-factory` · Docker **protected** · **not live** until `HF_TOKEN` is set |
+| Canonical six | README, a11oy, killinchu, lyte-services (protected), szl-model-inference-lab, evidence-studio |
+| a-11-oy.com | **not certified** |
 | Lyte | admitted protected design-partner cell |
 | Killinchu | only public synthetic reference |
 | Formulas | locked-8 · never grant authority |
@@ -33,28 +36,19 @@ This is **not a second flagship** and not a new product name. It binds as an A11
 - `szl-holdings/nexus` classified `A11OY_INCUBATOR_PACKAGE`
 - Frontier N1–N8 open
 - Production certificate of a-11-oy.com remains closed
-
-## Run
-
-```bash
-npm ci
-npm run typecheck
-npm run build
-npm run dev
-```
-
-Auth is off. Database is PGLite in preview, Neon when `DATABASE_URL` is set.
+- Hub visibility is not mutated from this repository without `HF_TOKEN`
 
 ## Hugging Face
 
-This README is a Docker Space card. Publishing the Space requires a Hub token this runtime does not have.
+Space cards live in [`spaces/`](./spaces/README.md).
 
-1. Create Space `SZLHOLDINGS/a11oy-factory` (Docker, port 7860)
-2. Add GitHub secret `HF_TOKEN`
-3. Run workflow **Sync Hugging Face Space**
+1. Merge [PR #1](https://github.com/szl-holdings/a11oy-factory/pull/1)
+2. Create Space `SZLHOLDINGS/a11oy-factory` as **protected** Docker, port 7860
+3. Add GitHub secret `HF_TOKEN`
+4. Run workflow **Sync Hugging Face Space**
 
-Until that token exists, Hub visibility is unchanged.
+Until that token exists, Hub stays unchanged. Do not pin this Space on the org front door.
 
 ## Honest contract
 
-`GET /api/a11oy/v1/honest` · `GET /api/a11oy/v1/admission` · `GET /readyz` returns 503 while `production_ready` is false.
+`GET /api/a11oy/v1/spaces` · `GET /api/a11oy/v1/honest` · `GET /readyz` returns 503 while `production_ready` is false.

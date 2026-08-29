@@ -3,24 +3,22 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-permissions:
-  contents: read
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: false
-      - name: Push Docker Space
+      - name: Push protected Docker Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           if [ -z "$HF_TOKEN" ]; then
-            echo "HF_TOKEN is not set. Space stays PREPARED_NOT_LIVE. No Hub mutation."
+            echo "HF_TOKEN is not set. Space cards stay PREPARED_NOT_LIVE. No Hub mutation."
             exit 0
           fi
+          echo "Target Space SZLHOLDINGS/a11oy-factory must stay protected. Do not pin."
           git config user.name "szl-factory"
           git config user.email "factory@szl-holdings"
           git remote add hf "https://huggingface.co/spaces/SZLHOLDINGS/a11oy-factory" || true
