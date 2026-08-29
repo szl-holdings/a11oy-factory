@@ -24,8 +24,10 @@ export const OWNER_ORDER = {
   huggingface: {
     intended_space: "SZLHOLDINGS/a11oy-factory",
     sdk: "docker",
-    status: "PREPARED_NOT_LIVE",
-    blocker: "No Hugging Face token in this runtime. GitHub Action waits on HF_TOKEN.",
+    status: "PUBLISHED_PRIVATE",
+    blocker: "Hub card exists. Docker is fetching metadata. Not a production certificate. Not a seventh public Space.",
+    url: "https://huggingface.co/spaces/SZLHOLDINGS/a11oy-factory",
+    published_via: "szl-holdings/szl-experiments publish-sibling-spaces",
   },
   still_prohibits: [
     "new top-level product name",
@@ -54,7 +56,7 @@ export const OWNER_ORDER = {
   truth_boundary: [
     "Packet 6 snapshot remains the captured estate evidence.",
     "This factory source is published at szl-holdings/a11oy-factory.",
-    "Hugging Face Space SZLHOLDINGS/a11oy-factory is prepared as Docker, not live until HF_TOKEN is present.",
+    "Hugging Face Space SZLHOLDINGS/a11oy-factory is published private via szl-experiments. Docker metadata is fetching; this is not a production certificate.",
     "Formulas still never grant authority.",
     "Killinchu remains the only public synthetic reference.",
     "Green light is an owner admission decision, not a production certificate of a-11-oy.com.",

@@ -19,7 +19,7 @@ function EstatePage() {
     <Page
       kicker="Canonical technical estate"
       title="One generated home"
-      lede="Packet 6 remains the captured inventory. The owner order overlays current admission: freeze lifted, nexus classified, Lyte admitted."
+      lede="Packet 6 remains the captured inventory. Owner overlay is live on GitHub: freeze lifted, nexus classified, factory published as an A11oy package."
     >
       <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat k="Authenticated repos" v={profile.counts.github_repositories_authenticated} />
@@ -27,6 +27,32 @@ function EstatePage() {
         <Stat k="Hub Spaces" v={profile.counts.hf_spaces} />
         <Stat k="/spaces display" v={profile.counts.a11oy_spaces_route_displayed} />
       </div>
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>szl-holdings alignment</CardTitle>
+          <CardDescription>Live GitHub overlay on Packet 6. Hub Space exists; Docker is fetching metadata. a-11-oy.com is not certified.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-2 text-sm text-muted">
+            <li>
+              <a className="text-accent underline-offset-4 hover:underline" href="https://github.com/szl-holdings/a11oy-factory" rel="noreferrer" target="_blank">szl-holdings/a11oy-factory</a>
+              {" "}— public BIND_AS_A11OY_PACKAGE · CI green on main
+            </li>
+            <li>
+              <a className="text-accent underline-offset-4 hover:underline" href="https://github.com/szl-holdings/nexus" rel="noreferrer" target="_blank">szl-holdings/nexus</a>
+              {" "}— classified A11OY_INCUBATOR_PACKAGE · not a second flagship
+            </li>
+            <li>
+              <a className="text-accent underline-offset-4 hover:underline" href="https://huggingface.co/spaces/SZLHOLDINGS/a11oy-factory" rel="noreferrer" target="_blank">SZLHOLDINGS/a11oy-factory</a>
+              {" "}— published private via szl-experiments · not a seventh public Space
+            </li>
+            <li>
+              <a className="text-accent underline-offset-4 hover:underline" href="https://github.com/szl-holdings/a11oy/issues/1426" rel="noreferrer" target="_blank">a11oy#1426</a>
+              {" "}— bind-the-factory tracking
+            </li>
+          </ul>
+        </CardContent>
+      </Card>
       <Tabs defaultValue="repos">
         <TabsList className="flex w-full flex-wrap justify-start">
           <TabsTrigger value="repos">Repositories</TabsTrigger>
