@@ -17,7 +17,7 @@ class CompilerTests(unittest.TestCase):
         self.assertEqual(len(rec.hash), 64)
 
     def test_frontiers_are_named_and_blocked_roadmap(self):
-        self.assertEqual(len(FRONTIERS), 8)
+        self.assertEqual(len(FRONTIERS), 12)
         expected = {
             "N1": "Serve",
             "N2": "Graph",
@@ -27,6 +27,10 @@ class CompilerTests(unittest.TestCase):
             "N6": "Cover",
             "N7": "Quant",
             "N8": "Title",
+            "N9": "Retrieve",
+            "N10": "Observe",
+            "N11": "Tune",
+            "N12": "Schema",
         }
         for cell in FRONTIERS:
             self.assertEqual(cell.title, expected[cell.id])
@@ -68,6 +72,19 @@ class CompilerTests(unittest.TestCase):
         cover = search_jobs("guidewire")
         self.assertEqual(cover["jobs"][0]["cell"], "N6")
 
+        retrieve = search_jobs("llamaindex")
+        self.assertEqual(retrieve["jobs"][0]["cell"], "N9")
+        self.assertFalse(retrieve["jobs"][0]["admitted"])
+
+        observe = search_jobs("phoenix")
+        self.assertEqual(observe["jobs"][0]["cell"], "N10")
+
+        tune = search_jobs("unsloth")
+        self.assertEqual(tune["jobs"][0]["cell"], "N11")
+
+        schema = search_jobs("outlines")
+        self.assertEqual(schema["jobs"][0]["cell"], "N12")
+
         sig = search_jobs("sigstore")
         self.assertEqual(sig["jobs"][0]["honesty"], "STRUCTURAL-ONLY")
         self.assertEqual(sig["jobs"][0]["cell"], "")
@@ -85,6 +102,25 @@ class CompilerTests(unittest.TestCase):
         rec = compile_cell("n1")
         self.assertEqual(rec.cell, "N1")
         self.assertEqual(rec.decision, BLOCKED)
+        rec = compile_cell("serve")
+        self.assertEqual(rec.cell, "N1")
+        rec = compile_cell("retrive")
+        self.assertEqual(rec.cell, "N9")
+        self.assertEqual(rec.decision, BLOCKED)
+        rec = compile_cell("n12")
+        self.assertEqual(rec.cell, "N12")
+        self.assertEqual(rec.decision, BLOCKED)
+
+    def test_typo_tolerant_search(self):
+        vlm = search_jobs("vlm")
+        self.assertTrue(vlm["jobs"])
+        self.assertEqual(vlm["jobs"][0]["leader"], "vLLM")
+        rag = search_jobs("rag")
+        self.assertTrue(any(j["cell"] == "N9" for j in rag["jobs"]))
+        qlora = search_jobs("qlora")
+        self.assertEqual(qlora["jobs"][0]["cell"], "N11")
+        retrive = search_jobs("retrive")
+        self.assertTrue(any(c["id"] == "N9" for c in retrive["cells"]))
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ import time
 import uuid
 from dataclasses import asdict, dataclass
 
-from .cells import ADMITTED, CELLS, Cell
+from .cells import Cell, resolve_cell
 
 BLOCKED = "BLOCKED"
 ALLOW = "ALLOW"
@@ -45,9 +45,9 @@ def _sha256(payload: dict) -> str:
 
 
 def compile_cell(cell_id: str, *, prev_hash: str = GENESIS, signal: str = "") -> CompileReceipt:
-    """Admit Lyte. Refuse N1–N8 and unknown ids. Never fabricates LIVE."""
+    """Admit Lyte. Refuse N1–N12 and unknown ids. Never fabricates LIVE."""
     key = (cell_id or "").strip()
-    cell: Cell | None = CELLS.get(key) or CELLS.get(key.lower()) or CELLS.get(key.upper())
+    cell: Cell | None = resolve_cell(key)
     ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     rid = str(uuid.uuid4())
     prev = prev_hash if isinstance(prev_hash, str) and len(prev_hash) == 64 else GENESIS
