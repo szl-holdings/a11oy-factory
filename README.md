@@ -8,7 +8,7 @@ app_port: 7860
 pinned: false
 license: apache-2.0
 suggested_hardware: cpu-basic
-short_description: Protected A11oy factory bind. Not a second flagship. Formulas never grant authority.
+short_description: Protected factory bind. Not a second flagship.
 ---
 
 # A11oy Factory
