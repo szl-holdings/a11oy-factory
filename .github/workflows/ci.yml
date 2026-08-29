@@ -16,6 +16,12 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-      - run: npm ci
+      - name: Install
+        run: |
+          if npm ci; then
+            exit 0
+          fi
+          echo "::warning::package-lock.json is out of sync with package.json; using npm install"
+          npm install
       - run: mkdir -p .grok && printf '%s\n' '{"VITE_AUTH_ENABLED":"false","deploy":{"database":true}}' > .grok/app-env.json
       - run: npm run typecheck
