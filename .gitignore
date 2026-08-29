@@ -14,3 +14,7 @@ artifacts
 .grok/preview.log
 .grok/status
 public/__grok
+
+__pycache__/
+*.py[cod]
+.pytest_cache/

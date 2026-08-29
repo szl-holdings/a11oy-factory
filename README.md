@@ -52,3 +52,15 @@ Until that token exists, Hub stays unchanged. Do not pin this Space on the org f
 ## Honest contract
 
 `GET /api/a11oy/v1/spaces` · `GET /api/a11oy/v1/honest` · `GET /readyz` returns 503 while `production_ready` is false.
+
+## Decision Cell Compiler
+
+Fail-closed organ of this factory. **Lyte** is the one admitted cell.
+**N1–N8** return `BLOCKED` / `ROADMAP`. Hash is UNSIGNED-honest, not a signature.
+Energy is UNAVAILABLE. Λ is Conjecture 1.
+
+See [`COMPILER.md`](./COMPILER.md) and `python -m a11oy_factory compile --cell lyte`.
+
+Do **not** Hub-publish this repository's Grok App Builder Docker until the
+Space is a real factory runtime. `SZLHOLDINGS/a11oy-factory` stays protected
+until a write-scoped token and a non-scaffold Dockerfile exist.
