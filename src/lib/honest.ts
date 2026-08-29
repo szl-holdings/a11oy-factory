@@ -1,5 +1,5 @@
 import type { HonestContract } from "@/lib/types";
-import { currentAdmission, OWNER_ORDER } from "@/lib/admission";
+import { currentAdmission, OWNER_ORDER, OWNER_CERT } from "@/lib/admission";
 import { profile, PROFILE_SHA256, snapshot } from "@/lib/data/registry";
 import { loadLedger } from "@/lib/ledger";
 import { validateProfile } from "@/lib/compiler";
@@ -27,8 +27,17 @@ export function buildHonest(): HonestContract {
     green_light: admission.current.green_light,
     owner_order_id: OWNER_ORDER.order_id,
     killinchu_durability: "EPHEMERAL_IN_PUBLIC_SPACE",
+    product_origin: {
+      url: OWNER_CERT.measured.product_url,
+      proof_url: OWNER_CERT.measured.proof_url,
+      certification: OWNER_CERT.certification,
+      owner_order_id: OWNER_CERT.order_id,
+      http: OWNER_CERT.measured.http,
+      health: OWNER_CERT.measured.health,
+      signer: OWNER_CERT.measured.signer,
+    },
     truth:
-      "Owner order AO-2026-08-29-001 is APPROVED. Factory source is public at github.com/szl-holdings/a11oy-factory. Nexus is classified as an A11oy incubator package. Lyte is the admitted protected design-partner cell. Frontier N1–N8 is open. Hugging Face Space SZLHOLDINGS/a11oy-factory is published private; Docker is fetching metadata. This runtime still does not certify a-11-oy.com production.",
+      "Owner order AO-2026-08-29-002 certifies a-11-oy.com as LIVE_PRODUCT_ORIGIN (HTTP 200, health ok, doctrine v11 LOCKED). Signer remains ABSENT — DSSE and FedRAMP are not certified. Factory runtime stays production_ready=false. Nexus is an A11oy incubator package. Lyte is the admitted protected design-partner cell.",
     generated_at: new Date().toISOString(),
   };
 }
@@ -106,7 +115,7 @@ export function readiness() {
   const blocking = [
     errors.length ? "profile validation errors" : null,
     "Killinchu public Space reports EPHEMERAL durability",
-    "production certification remains closed",
+    "a-11-oy.com is LIVE_PRODUCT_ORIGIN; DSSE and FedRAMP remain uncertified",
     "Hub and GitHub visibility cannot be mutated from this runtime",
     snapshot.current_killinchu_ready_observation.production_ready
       ? null

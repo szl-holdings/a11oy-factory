@@ -30,10 +30,16 @@ function EstatePage() {
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>szl-holdings alignment</CardTitle>
-          <CardDescription>Live GitHub overlay on Packet 6. Hub Space exists; Docker is fetching metadata. a-11-oy.com is not certified.</CardDescription>
+          <CardDescription>
+            Live GitHub overlay. a-11-oy.com is certified LIVE_PRODUCT_ORIGIN (HTTP 200, doctrine v11 LOCKED). Signer ABSENT. FedRAMP uncertified. Factory production_ready=false.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <ul className="space-y-2 text-sm text-muted">
+            <li>
+              <a className="text-accent underline-offset-4 hover:underline" href="https://a-11-oy.com" rel="noreferrer" target="_blank">a-11-oy.com</a>
+              {" "}— LIVE_PRODUCT_ORIGIN · HTTP 200 · doctrine v11 LOCKED · signer ABSENT
+            </li>
             <li>
               <a className="text-accent underline-offset-4 hover:underline" href="https://github.com/szl-holdings/a11oy-factory" rel="noreferrer" target="_blank">szl-holdings/a11oy-factory</a>
               {" "}— public BIND_AS_A11OY_PACKAGE · CI green on main

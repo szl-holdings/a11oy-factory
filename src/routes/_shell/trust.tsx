@@ -33,6 +33,8 @@ function TrustPage() {
           <CardContent className="space-y-2 font-mono text-xs text-muted">
             <p>locked_formula_count: 8</p>
             <p>production_ready: false</p>
+            <p>product_origin: LIVE_PRODUCT_ORIGIN</p>
+            <p>signer: ABSENT</p>
             <p>nexus: CLASSIFIED_A11OY_INCUBATOR</p>
             <p>admission_freeze: LIFTED_BY_OWNER</p>
             <p>green_light: APPROVED</p>

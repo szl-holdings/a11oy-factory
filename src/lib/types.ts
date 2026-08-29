@@ -325,6 +325,15 @@ export interface HonestContract {
   green_light: "PROPOSED" | "APPROVED";
   owner_order_id: string;
   killinchu_durability: "EPHEMERAL_IN_PUBLIC_SPACE";
+  product_origin: {
+    url: string;
+    proof_url: string;
+    certification: "LIVE_PRODUCT_ORIGIN";
+    owner_order_id: string;
+    http: 200;
+    health: "ok";
+    signer: "ABSENT";
+  };
   truth: string;
   generated_at: string;
 }

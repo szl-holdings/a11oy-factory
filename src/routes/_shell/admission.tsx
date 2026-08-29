@@ -47,7 +47,7 @@ function AdmissionPage() {
     <Page
       kicker="Owner admission desk"
       title="Green light approved."
-      lede="The estate owner approved order AO-2026-08-29-001. That lifts the freeze for factory internals. It does not certify production or mutate Hub or GitHub."
+      lede="AO-2026-08-29-001 lifted the freeze. AO-2026-08-29-002 certifies a-11-oy.com as LIVE_PRODUCT_ORIGIN. Signer remains ABSENT. FedRAMP is uncertified. This factory stays production_ready=false."
     >
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         <Card className="min-w-0">

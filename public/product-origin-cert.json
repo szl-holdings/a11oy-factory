@@ -1,0 +1,23 @@
+{
+  "schema": "szl.owner-product-origin-cert/v1",
+  "order_id": "AO-2026-08-29-002",
+  "certification": "LIVE_PRODUCT_ORIGIN",
+  "product_url": "https://a-11-oy.com",
+  "proof_url": "https://a11oy.net",
+  "measured": {
+    "http": 200,
+    "health": "ok",
+    "doctrine": "v11 LOCKED 749/14/163 @ c7c0ba17",
+    "honest_git_sha": "9208362d2a510f2d23f6a1bc80ee82ecf5dd580e",
+    "signer": "ABSENT",
+    "locked_formulas": ["F1", "F4", "F7", "F11", "F12", "F18", "F19", "F22"],
+    "lambda": "Conjecture 1 — not a theorem",
+    "evidence_class": "MEASURED"
+  },
+  "not_certified": [
+    "DSSE / persistent signer",
+    "FedRAMP / IL5 / ATO",
+    "Killinchu public production_ready",
+    "a11oy-factory production_ready"
+  ]
+}
