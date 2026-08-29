@@ -193,6 +193,21 @@ FRONTIERS: tuple[Cell, ...] = (
         ),
         szl="schema stays outside the weights. Constrained decode as a job. Not an Outlines/Instructor rehost.",
     ),
+    Cell(
+        id="N13",
+        title="Energy",
+        organ="nervous",
+        honesty="UNAVAILABLE",
+        admitted=False,
+        bind="BIND_AS_A11OY_PACKAGE",
+        job="measured energy channel",
+        cite="Intel RAPL package counter; NVIDIA NVML nvmlDeviceGetTotalEnergyConsumption",
+        szl="LIVE probe. Joule MEASURED only from RAPL or NVML. Never a fabricated joule. Not an Electricity Maps clone.",
+        note=(
+            "Energy channel is LIVE. Joule stays UNAVAILABLE until RAPL or NVML "
+            "is readable on the box. Compiler refuses admission of a fabricated joule."
+        ),
+    ),
 )
 
 CELLS: dict[str, Cell] = {LYTE.id: LYTE, **{c.id: c for c in FRONTIERS}}
@@ -230,6 +245,10 @@ _ALIASES: dict[str, str] = {
     "schema": "N12",
     "outlines": "N12",
     "instructor": "N12",
+    "energy": "N13",
+    "joule": "N13",
+    "rapl": "N13",
+    "nvml": "N13",
 }
 
 

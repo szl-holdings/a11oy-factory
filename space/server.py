@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -11,11 +12,29 @@ from a11oy_factory.cells import FRONTIERS, LYTE
 from a11oy_factory.compiler import compile_cell
 from a11oy_factory.jobs import JOBS, search_jobs
 
-HTML = Path(__file__).with_name("index.html")
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+HTML = HERE / "index.html"
+
+try:
+    from energy import probe
+except ImportError:
+    def probe(*, sample_s: float = 0.0):  # type: ignore
+        return {
+            "channel": "LIVE",
+            "honesty": "UNAVAILABLE",
+            "source": None,
+            "energy_j": None,
+            "note": "energy.py missing on this flatten. Channel live. Never a fabricated joule.",
+        }
 
 
 def _cell_payload(cell) -> dict:
     return dict(cell.__dict__)
+
+
+JSON_PATHS = {"/health", "/healthz", "/api/cells", "/api/jobs", "/api/search", "/api/energy", "/readyz"}
+HTML_PATHS = {"/", "/index.html"}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -37,6 +56,14 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "content-type")
         self.end_headers()
 
+    def do_HEAD(self) -> None:  # noqa: N802
+        path = urlparse(self.path).path.rstrip("/") or "/"
+        ok = path in HTML_PATHS or path in JSON_PATHS
+        self.send_response(200 if ok else 404)
+        self.send_header("Content-Type", "text/html; charset=utf-8" if path in HTML_PATHS else "application/json")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         path = parsed.path
@@ -44,7 +71,8 @@ class Handler(BaseHTTPRequestHandler):
         if path in ("/", "/index.html"):
             self._send(200, HTML.read_bytes(), "text/html; charset=utf-8")
             return
-        if path in ("/health", "/healthz"):
+        if path in ("/health", "/healthz", "/readyz"):
+            energy = probe()
             self._send(
                 200,
                 json.dumps(
@@ -58,11 +86,15 @@ class Handler(BaseHTTPRequestHandler):
                             for c in FRONTIERS
                         ],
                         "lambda_status": "Conjecture 1",
-                        "energy": None,
+                        "energy": energy,
+                        "proven_trust": False,
                     }
                 ).encode(),
                 "application/json",
             )
+            return
+        if path == "/api/energy":
+            self._send(200, json.dumps(probe()).encode(), "application/json")
             return
         if path == "/api/cells":
             cells = [_cell_payload(LYTE)] + [_cell_payload(c) for c in FRONTIERS]
@@ -103,7 +135,7 @@ class Handler(BaseHTTPRequestHandler):
 def main() -> None:
     port = int(os.environ.get("PORT", "7860"))
     httpd = ThreadingHTTPServer(("0.0.0.0", port), Handler)
-    print(f"a11oy-factory listening 0.0.0.0:{port} admitted={LYTE.id}", flush=True)
+    print(f"a11oy-factory listening 0.0.0.0:{port} admitted={LYTE.id} energy=LIVE-probe", flush=True)
     httpd.serve_forever()
 
 
