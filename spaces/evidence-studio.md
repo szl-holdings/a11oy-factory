@@ -8,11 +8,11 @@ app_port: 7860
 pinned: false
 license: apache-2.0
 suggested_hardware: cpu-basic
-short_description: Canonical merge sink for holographic and receipt Spaces. One writer. Not live.
+short_description: Merge sink. One writer. Receipts, not a flagship.
 ---
 
 # Evidence Studio
 
-Prepared merge sink. Do not publish until holographic / receipt Spaces bind to this one writer.
-
-Packet 6 MERGE_INTO_EVIDENCE_STUDIO Spaces stay listed until that bind exists. This card does not delete them.
+Canonical merge sink for holographic and receipt Spaces. One writer.
+Packet sources stay listed. This card does not delete them.
+UNSIGNED-honest hash. Energy UNAVAILABLE. Λ = Conjecture 1.

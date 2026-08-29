@@ -8,14 +8,13 @@ app_port: 7860
 pinned: false
 license: apache-2.0
 suggested_hardware: cpu-basic
-short_description: Protected design-partner cell. Proposal only. Formulas never grant authority.
+short_description: Lyte window. BIND_AS_A11OY_PACKAGE. Not a flagship.
 ---
 
 # Lyte Services
 
-Owner-admitted protected pilot. **Not public launch.**
+Admitted design-partner cell. **BIND_AS_A11OY_PACKAGE.** Not a second flagship.
+Same factory compiler. Lyte window only.
 
-Same factory image + Lyte manifest. No code fork.
-
-Public launch stays blocked until measured pilot evidence.
 Unapproved contract acceptance, unapproved pricing, and automatic staffing stay prohibited.
+Formulas never grant authority.

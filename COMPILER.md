@@ -5,20 +5,36 @@ BIND_AS_A11OY_PACKAGE. Not a second flagship.
 The Grok App Builder control plane stays at the repo root. This package is
 the fail-closed compiler that admits **Lyte** and refuses **N1–N8**.
 
+N1–N8 are named category-capture theatres. We cite the leader of the job
+and take the job, not the code. Compiling a frontier returns BLOCKED / ROADMAP
+until doctrine names that cell LIVE.
+
 | Surface | Honesty |
 |---|---|
 | Decision Cell Compiler | LIVE, fail-closed |
 | Admitted Lyte cell | STRUCTURAL-ONLY |
-| Frontier N1–N8 | ROADMAP |
-| Λ uniqueness | Conjecture 1 OPEN |
+| N1 Serve (vLLM / SGLang / Ollama job) | ROADMAP |
+| N2 Graph (LangGraph job) | ROADMAP |
+| N3 Guard (Llama Guard job) | ROADMAP |
+| N4 Mosaic (MosaicML / Databricks job) | ROADMAP |
+| N5 Lattice (immune-lattice overlay bind) | ROADMAP |
+| N6 Cover (Guidewire P&C job) | ROADMAP |
+| N7 Quant (QuantConnect LEAN job) | ROADMAP |
+| N8 Title (Zillow / records job) | ROADMAP |
+| Sigstore / Cosign | STRUCTURAL-ONLY (hash is tamper-evident, not a signature) |
 | Energy | UNAVAILABLE |
-| Signing | UNSIGNED-honest SHA-256 (tamper-evident, not a signature) |
+| Λ uniqueness | Conjecture 1 OPEN |
+| Signing | UNSIGNED-honest SHA-256 |
 
 ```bash
 python -m unittest discover -s tests -v
 python -m a11oy_factory compile --cell lyte
 python -m a11oy_factory compile --cell N3   # BLOCKED, ROADMAP
+python -m a11oy_factory search --q vllm
+python -m a11oy_factory search --q guidewire
 ```
+
+Space APIs: `GET /api/cells` · `GET /api/jobs` · `GET /api/search?q=` · `POST /api/compile`.
 
 Canonical flagship remains [szl-holdings/a11oy](https://github.com/szl-holdings/a11oy).
 This organ does not mint production signatures, run inference, or claim an ATO.

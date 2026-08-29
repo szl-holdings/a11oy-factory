@@ -5,12 +5,17 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from a11oy_factory.cells import CELLS, FRONTIERS, LYTE
 from a11oy_factory.compiler import compile_cell
+from a11oy_factory.jobs import JOBS, search_jobs
 
 HTML = Path(__file__).with_name("index.html")
+
+
+def _cell_payload(cell) -> dict:
+    return dict(cell.__dict__)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -33,7 +38,9 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self) -> None:  # noqa: N802
-        path = urlparse(self.path).path
+        parsed = urlparse(self.path)
+        path = parsed.path
+        qs = parse_qs(parsed.query)
         if path in ("/", "/index.html"):
             self._send(200, HTML.read_bytes(), "text/html; charset=utf-8")
             return
@@ -46,7 +53,10 @@ class Handler(BaseHTTPRequestHandler):
                         "service": "a11oy-factory",
                         "bind": "BIND_AS_A11OY_PACKAGE",
                         "admitted": ["lyte"],
-                        "frontiers": [c.id for c in FRONTIERS],
+                        "frontiers": [
+                            {"id": c.id, "title": c.title, "job": c.job, "honesty": c.honesty}
+                            for c in FRONTIERS
+                        ],
                         "lambda_status": "Conjecture 1",
                         "energy": None,
                     }
@@ -55,8 +65,19 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
         if path == "/api/cells":
-            cells = [CELLS[k].__dict__ for k in ["lyte"] + [f"N{n}" for n in range(1, 9)]]
+            cells = [_cell_payload(CELLS[k]) for k in ["lyte"] + [f"N{n}" for n in range(1, 9)]]
             self._send(200, json.dumps(cells).encode(), "application/json")
+            return
+        if path == "/api/jobs":
+            self._send(
+                200,
+                json.dumps([j.__dict__ for j in JOBS]).encode(),
+                "application/json",
+            )
+            return
+        if path == "/api/search":
+            q = (qs.get("q") or [""])[0]
+            self._send(200, json.dumps(search_jobs(q)).encode(), "application/json")
             return
         self._send(404, b"not found", "text/plain")
 
@@ -71,6 +92,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/compile":
             rec = compile_cell(str(data.get("cell") or ""), signal=str(data.get("signal") or ""))
             self._send(200, json.dumps(rec.as_dict()).encode(), "application/json")
+            return
+        if path == "/api/search":
+            rec = search_jobs(str(data.get("q") or data.get("query") or ""))
+            self._send(200, json.dumps(rec).encode(), "application/json")
             return
         self._send(404, b"not found", "text/plain")
 
