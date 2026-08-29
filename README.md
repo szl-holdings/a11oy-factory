@@ -21,7 +21,7 @@ This is **not a second flagship** and not a new product name. It binds as an A11
 | Surface | State |
 | --- | --- |
 | GitHub | [szl-holdings/a11oy-factory](https://github.com/szl-holdings/a11oy-factory) · public |
-| Hugging Face Space | `SZLHOLDINGS/a11oy-factory` · Docker **protected** · **not live** until `HF_TOKEN` is set |
+| Hugging Face Space | `SZLHOLDINGS/a11oy-factory` · Docker compiler hologram · **not RUNNING until Hub readback** |
 | Canonical six | README, a11oy, killinchu, lyte-services (protected), szl-model-inference-lab, evidence-studio |
 | a-11-oy.com | **not certified** |
 | Lyte | admitted protected design-partner cell |

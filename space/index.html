@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>A11oy Factory — Decision Cell Compiler</title>
+  <style>
+    :root { --bg:#07090d; --fg:#e8edf2; --muted:#8b95a3; --accent:#3af4c8; --halt:#e07a6a; --gold:#e8c074; --line:rgba(232,237,242,.12); --surf:#0d1520; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 "Segoe UI",system-ui,sans-serif; }
+    header, main { max-width:980px; margin:0 auto; padding:24px 20px; }
+    h1 { font-family: Georgia, serif; font-weight:500; letter-spacing:-.03em; }
+    .kicker { font:11px/1 ui-monospace,Menlo,monospace; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); }
+    .grid { display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); }
+    .card { background:var(--surf); border:1px solid var(--line); border-radius:16px; padding:14px; cursor:pointer; }
+    .card[data-admitted="true"] { border-color: var(--accent); }
+    a { color:var(--accent); }
+    pre { white-space:pre-wrap; word-break:break-word; font:12px/1.45 ui-monospace,Menlo,monospace; color:var(--gold); min-height:8rem; background:#101824; border:1px solid var(--line); padding:14px; }
+    .muted { color:var(--muted); font-size:14px; }
+    .chip { display:inline-block; border:1px solid var(--line); padding:3px 8px; font:10px ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin:0 6px 6px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="kicker">BIND_AS_A11OY_PACKAGE · not a second flagship</p>
+    <h1>Decision Cell Compiler</h1>
+    <p class="muted">Lyte is the one admitted cell. N1–N8 are named frontiers: compiling them returns <b>BLOCKED / ROADMAP</b>. That is the product. Hash is UNSIGNED-honest. Energy UNAVAILABLE. Λ = Conjecture 1.</p>
+    <p>
+      <span class="chip">Doctrine v11</span>
+      <span class="chip">Lyte STRUCTURAL-ONLY</span>
+      <span class="chip">N1–N8 ROADMAP</span>
+    </p>
+  </header>
+  <main>
+    <div class="grid" id="cells"></div>
+    <section style="margin-top:16px">
+      <h2>Receipt</h2>
+      <pre id="out">select a cell</pre>
+    </section>
+    <p class="muted">Canonical flagship: <a href="https://huggingface.co/spaces/SZLHOLDINGS/a11oy">SZLHOLDINGS/a11oy</a>. Source: <a href="https://github.com/szl-holdings/a11oy-factory">szl-holdings/a11oy-factory</a>.</p>
+  </main>
+  <script>
+    const cells = ["lyte","N1","N2","N3","N4","N5","N6","N7","N8"];
+    const box = document.getElementById("cells");
+    box.innerHTML = cells.map(id => `<button class="card" data-id="${id}" data-admitted="${id==="lyte"}"><b>${id}</b><div class="muted">${id==="lyte"?"admitted":"ROADMAP"}</div></button>`).join("");
+    async function compile(id) {
+      const r = await fetch("/api/compile", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({cell:id, signal:"factory bind"}) });
+      document.getElementById("out").textContent = JSON.stringify(await r.json(), null, 2);
+    }
+    box.querySelectorAll("button").forEach(b => b.onclick = () => compile(b.dataset.id));
+  </script>
+</body>
+</html>
