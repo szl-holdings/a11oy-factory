@@ -8,7 +8,7 @@ app_port: 7860
 pinned: false
 license: apache-2.0
 suggested_hardware: cpu-basic
-short_description: Decision Cell Compiler. Lyte admitted. N1–N21 ROADMAP.
+short_description: Decision Cell Compiler. Lyte admitted. N1–N25 STARTED.
 ---
 
 # A11oy Factory
@@ -26,7 +26,7 @@ This is **not a second flagship**. It binds as an A11oy package.
 | Canonical flagship | [SZLHOLDINGS/a11oy](https://huggingface.co/spaces/SZLHOLDINGS/a11oy) |
 | a-11-oy.com | **not certified** |
 | Lyte | admitted STRUCTURAL-ONLY design-partner cell |
-| N1–N21 | named theatres, ROADMAP (Energy UNAVAILABLE), compile returns BLOCKED |
+| N1–N25 | named theatres, ROADMAP · STARTED (Energy UNAVAILABLE), compile returns BLOCKED |
 | Formulas | locked-8 · never grant authority |
 
 ## Named frontiers
@@ -56,7 +56,11 @@ Cite the leader. Take the job. Do not rehost the code.
 | N18 | Route | LiteLLM / OpenRouter / RouteLLM | ROADMAP |
 | N19 | Cache | LMCache / Mooncake / GPTCache | ROADMAP |
 | N20 | Voice | LiveKit Agents / Cartesia / Deepgram | ROADMAP |
-| N21 | Sandbox | Daytona / E2B | ROADMAP |
+| N21 | Sandbox | Daytona / E2B | ROADMAP · STARTED |
+| N22 | Identity | SPIFFE / SPIRE / Astrix NHI | ROADMAP · STARTED |
+| N23 | Rails | NVIDIA NeMo Guardrails (not Llama Guard) | ROADMAP · STARTED |
+| N24 | Browser | Playwright / Stagehand / Browserbase | ROADMAP · STARTED |
+| N25 | Policy | AWS Cedar / Open Policy Agent | ROADMAP · STARTED |
 
 Sigstore stays STRUCTURAL-ONLY (UNSIGNED-honest hash, not Cosign).
 Energy stays UNAVAILABLE. Λ stays Conjecture 1.
@@ -67,19 +71,22 @@ Energy stays UNAVAILABLE. Λ stays Conjecture 1.
 
 - Admission freeze lifted for factory internals
 - `szl-holdings/nexus` classified `A11OY_INCUBATOR_PACKAGE`
-- Frontier N1–N21 named and open as ROADMAP theatres (Energy UNAVAILABLE)
+- Frontier N1–N25 named and STARTED as fail-closed organs (Energy UNAVAILABLE). Not LIVE.
 - Production certificate of a-11-oy.com remains closed
 - Hub writes go through Immune (`szl-holdings/immune` `secrets.HF_TOKEN`)
 
 ## Decision Cell Compiler
 
 Fail-closed organ of this factory. **Lyte** is the one admitted cell.
-**N1–N21** return `BLOCKED`. Energy returns `UNAVAILABLE`. Hash is UNSIGNED-honest, not a signature.
+**N1–N25** return `BLOCKED`. Organs are STARTED (`POST /api/act`) and still halt.
+Energy returns `UNAVAILABLE`. Hash is UNSIGNED-honest, not a signature.
 
 ```bash
 python -m a11oy_factory compile --cell lyte
-python -m a11oy_factory search --q langgraph
-python -m a11oy_factory search --q llamaindex
+python -m a11oy_factory roadmap
+python -m a11oy_factory act --cell N22 --payload '{"agent":"counsel"}'
+python -m a11oy_factory search --q spiffe
+python -m a11oy_factory search --q nemo
 ```
 
 See [`COMPILER.md`](./COMPILER.md). Space cards live in [`spaces/`](./spaces/README.md).

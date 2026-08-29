@@ -17,7 +17,7 @@ class CompilerTests(unittest.TestCase):
         self.assertEqual(len(rec.hash), 64)
 
     def test_frontiers_are_named_and_blocked_roadmap(self):
-        self.assertEqual(len(FRONTIERS), 21)
+        self.assertEqual(len(FRONTIERS), 25)
         expected = {
             "N1": "Serve",
             "N2": "Graph",
@@ -40,6 +40,10 @@ class CompilerTests(unittest.TestCase):
             "N19": "Cache",
             "N20": "Voice",
             "N21": "Sandbox",
+            "N22": "Identity",
+            "N23": "Rails",
+            "N24": "Browser",
+            "N25": "Policy",
         }
         for cell in FRONTIERS:
             self.assertEqual(cell.title, expected[cell.id])
@@ -126,6 +130,19 @@ class CompilerTests(unittest.TestCase):
         sand = search_jobs("daytona")
         self.assertEqual(sand["jobs"][0]["cell"], "N21")
 
+        ident = search_jobs("spiffe")
+        self.assertEqual(ident["jobs"][0]["cell"], "N22")
+        self.assertIn("Do not rehost", ident["jobs"][0]["refuse"])
+
+        rails = search_jobs("nemo")
+        self.assertEqual(rails["jobs"][0]["cell"], "N23")
+
+        browser = search_jobs("playwright")
+        self.assertEqual(browser["jobs"][0]["cell"], "N24")
+
+        policy = search_jobs("cedar")
+        self.assertEqual(policy["jobs"][0]["cell"], "N25")
+
         sig = search_jobs("sigstore")
         self.assertEqual(sig["jobs"][0]["honesty"], "STRUCTURAL-ONLY")
         self.assertEqual(sig["jobs"][0]["cell"], "")
@@ -173,6 +190,15 @@ class CompilerTests(unittest.TestCase):
         self.assertEqual(rec.cell, "N20")
         rec = compile_cell("daytona")
         self.assertEqual(rec.cell, "N21")
+        self.assertEqual(rec.decision, BLOCKED)
+        rec = compile_cell("spiffe")
+        self.assertEqual(rec.cell, "N22")
+        rec = compile_cell("nemo")
+        self.assertEqual(rec.cell, "N23")
+        rec = compile_cell("playwright")
+        self.assertEqual(rec.cell, "N24")
+        rec = compile_cell("cedar")
+        self.assertEqual(rec.cell, "N25")
         self.assertEqual(rec.decision, BLOCKED)
 
     def test_typo_tolerant_search(self):
