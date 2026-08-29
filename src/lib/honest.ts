@@ -28,7 +28,7 @@ export function buildHonest(): HonestContract {
     owner_order_id: OWNER_ORDER.order_id,
     killinchu_durability: "EPHEMERAL_IN_PUBLIC_SPACE",
     truth:
-      "Owner order AO-2026-08-29-001 is APPROVED. Factory source is public at github.com/szl-holdings/a11oy-factory. Nexus is classified as an A11oy incubator package. Lyte is the admitted protected design-partner cell. Frontier N1–N8 is open. Hugging Face Space is prepared, not live. This runtime still does not certify a-11-oy.com production.",
+      "Owner order AO-2026-08-29-001 is APPROVED. Factory source is public at github.com/szl-holdings/a11oy-factory. Nexus is classified as an A11oy incubator package. Lyte is the admitted protected design-partner cell. Frontier N1–N8 is open. Hugging Face Space SZLHOLDINGS/a11oy-factory is published private; Docker is fetching metadata. This runtime still does not certify a-11-oy.com production.",
     generated_at: new Date().toISOString(),
   };
 }

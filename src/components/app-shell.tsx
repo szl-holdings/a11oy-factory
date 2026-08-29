@@ -96,7 +96,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-xs text-subtle sm:flex-row sm:items-center sm:justify-between">
           <p>
-            Snapshot {profile.captured_at} · github.com/szl-holdings/a11oy-factory · HF prepared, not live
+            Snapshot {profile.captured_at} · github.com/szl-holdings/a11oy-factory · HF Space published private
           </p>
           <div className="flex flex-wrap gap-4">
             <a

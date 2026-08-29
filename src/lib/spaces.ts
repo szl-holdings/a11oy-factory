@@ -2,7 +2,7 @@ import { cellOverlay, OWNER_ORDER } from "@/lib/admission";
 import { profile } from "@/lib/data/registry";
 
 export type SpaceVisibility = "public" | "protected" | "private";
-export type SpacePublish = "LIVE" | "PREPARED_NOT_LIVE" | "KEEP" | "MERGE" | "DO_NOT_PUBLISH";
+export type SpacePublish = "LIVE" | "PREPARED_NOT_LIVE" | "KEEP" | "MERGE" | "DO_NOT_PUBLISH" | "PUBLISHED_PRIVATE";
 
 export interface SpaceConfig {
   id: string;
@@ -158,12 +158,12 @@ export const SPACE_CONFIGS: SpaceConfig[] = [
     app_port: 7860,
     hardware: "cpu-basic",
     license: "apache-2.0",
-    publish: "PREPARED_NOT_LIVE",
+    publish: "PUBLISHED_PRIVATE",
     canonical: false,
     vertical_id: null,
     source: OWNER_ORDER.github.url,
     recommended_action: "BIND_AS_A11OY_PACKAGE",
-    card: "Not a second flagship. Not a seventh public Space. Protected Docker bind of the factory.",
+    card: "Private Docker Space published via szl-experiments sibling publisher. Not a second flagship. Not a seventh public Space.",
     limitations: [
       ...SHARED_LIMITS,
       "Must remain protected. Do not pin on the org front door.",
@@ -305,8 +305,8 @@ export function spacePlan() {
     schema: "szl.space-release-plan/v1" as const,
     owner_order_id: OWNER_ORDER.order_id,
     factory_repo: OWNER_ORDER.github.factory_repo,
-    huggingface_token: "ABSENT",
-    hub_mutation: "blocked-no-token",
+    huggingface_token: "PRESENT_ON_SZL_EXPERIMENTS",
+    hub_mutation: "published-private-via-szl-experiments",
     canonical_six: CANONICAL_PUBLIC_SIX,
     configured: SPACE_CONFIGS.map((space) => ({
       ...space,
@@ -317,6 +317,6 @@ export function spacePlan() {
     inventory_count: inventory.length,
     live_org_observation,
     truth:
-      "Space cards are configured in this factory. Hub stays unchanged until HF_TOKEN exists. Lyte is protected, not public. a11oy-factory is a protected package bind, not a seventh public Space.",
+      "Factory Space SZLHOLDINGS/a11oy-factory is published private via szl-experiments. Lyte is protected, not public. a11oy-factory is a package bind, not a seventh public Space. Docker metadata is fetching — not a production certificate.",
   };
 }
