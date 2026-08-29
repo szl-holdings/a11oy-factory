@@ -17,7 +17,7 @@ class CompilerTests(unittest.TestCase):
         self.assertEqual(len(rec.hash), 64)
 
     def test_frontiers_are_named_and_blocked_roadmap(self):
-        self.assertEqual(len(FRONTIERS), 12)
+        self.assertEqual(len(FRONTIERS), 13)
         expected = {
             "N1": "Serve",
             "N2": "Graph",
@@ -31,6 +31,7 @@ class CompilerTests(unittest.TestCase):
             "N10": "Observe",
             "N11": "Tune",
             "N12": "Schema",
+            "N13": "Energy",
         }
         for cell in FRONTIERS:
             self.assertEqual(cell.title, expected[cell.id])
@@ -39,7 +40,10 @@ class CompilerTests(unittest.TestCase):
             self.assertTrue(cell.szl)
             rec = compile_cell(cell.id)
             self.assertEqual(rec.decision, BLOCKED)
-            self.assertEqual(rec.honesty_tier, "ROADMAP")
+            if cell.id == "N13":
+                self.assertEqual(rec.honesty_tier, "UNAVAILABLE")
+            else:
+                self.assertEqual(rec.honesty_tier, "ROADMAP")
             self.assertIn(cell.title, rec.note)
 
     def test_unknown_fails_closed(self):
@@ -85,6 +89,9 @@ class CompilerTests(unittest.TestCase):
         schema = search_jobs("outlines")
         self.assertEqual(schema["jobs"][0]["cell"], "N12")
 
+        energy_cell = search_jobs("nvml")
+        self.assertTrue(any(c["id"] == "N13" for c in energy_cell["cells"]))
+
         sig = search_jobs("sigstore")
         self.assertEqual(sig["jobs"][0]["honesty"], "STRUCTURAL-ONLY")
         self.assertEqual(sig["jobs"][0]["cell"], "")
@@ -110,6 +117,10 @@ class CompilerTests(unittest.TestCase):
         rec = compile_cell("n12")
         self.assertEqual(rec.cell, "N12")
         self.assertEqual(rec.decision, BLOCKED)
+        rec = compile_cell("energy")
+        self.assertEqual(rec.cell, "N13")
+        self.assertEqual(rec.decision, BLOCKED)
+        self.assertEqual(rec.honesty_tier, "UNAVAILABLE")
 
     def test_typo_tolerant_search(self):
         vlm = search_jobs("vlm")
