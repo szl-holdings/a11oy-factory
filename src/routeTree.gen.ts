@@ -33,6 +33,9 @@ import { Route as ApiA11oyV1FrontierRouteImport } from './routes/api/a11oy/v1/fr
 import { Route as ApiA11oyV1GenomeRouteImport } from './routes/api/a11oy/v1/genome'
 import { Route as ApiA11oyV1HonestRouteImport } from './routes/api/a11oy/v1/honest'
 import { Route as ApiA11oyV1LedgerRouteImport } from './routes/api/a11oy/v1/ledger'
+import { Route as ApiA11oyV1OrgansRouteImport } from './routes/api/a11oy/v1/organs'
+import { Route as ApiA11oyV1OrgansHistoryRouteImport } from './routes/api/a11oy/v1/organs.history'
+import { Route as ApiA11oyV1OrgansIdRouteImport } from './routes/api/a11oy/v1/organs.$id'
 import { Route as ApiA11oyV1SpacesRouteImport } from './routes/api/a11oy/v1/spaces'
 import { Route as ApiA11oyV1SpacesHealthRouteImport } from './routes/api/a11oy/v1/spaces/health'
 
@@ -156,6 +159,21 @@ const ApiA11oyV1LedgerRoute = ApiA11oyV1LedgerRouteImport.update({
   path: '/api/a11oy/v1/ledger',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiA11oyV1OrgansRoute = ApiA11oyV1OrgansRouteImport.update({
+  id: '/api/a11oy/v1/organs',
+  path: '/api/a11oy/v1/organs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiA11oyV1OrgansHistoryRoute = ApiA11oyV1OrgansHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => ApiA11oyV1OrgansRoute,
+} as any)
+const ApiA11oyV1OrgansIdRoute = ApiA11oyV1OrgansIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiA11oyV1OrgansRoute,
+} as any)
 const ApiA11oyV1SpacesRoute = ApiA11oyV1SpacesRouteImport.update({
   id: '/api/a11oy/v1/spaces',
   path: '/api/a11oy/v1/spaces',
@@ -191,6 +209,9 @@ export interface FileRoutesByFullPath {
   '/api/a11oy/v1/genome': typeof ApiA11oyV1GenomeRoute
   '/api/a11oy/v1/honest': typeof ApiA11oyV1HonestRoute
   '/api/a11oy/v1/ledger': typeof ApiA11oyV1LedgerRoute
+  '/api/a11oy/v1/organs': typeof ApiA11oyV1OrgansRouteWithChildren
+  '/api/a11oy/v1/organs/history': typeof ApiA11oyV1OrgansHistoryRoute
+  '/api/a11oy/v1/organs/$id': typeof ApiA11oyV1OrgansIdRoute
   '/api/a11oy/v1/spaces': typeof ApiA11oyV1SpacesRouteWithChildren
   '/api/a11oy/v1/spaces/health': typeof ApiA11oyV1SpacesHealthRoute
 }
@@ -218,6 +239,9 @@ export interface FileRoutesByTo {
   '/api/a11oy/v1/genome': typeof ApiA11oyV1GenomeRoute
   '/api/a11oy/v1/honest': typeof ApiA11oyV1HonestRoute
   '/api/a11oy/v1/ledger': typeof ApiA11oyV1LedgerRoute
+  '/api/a11oy/v1/organs': typeof ApiA11oyV1OrgansRouteWithChildren
+  '/api/a11oy/v1/organs/history': typeof ApiA11oyV1OrgansHistoryRoute
+  '/api/a11oy/v1/organs/$id': typeof ApiA11oyV1OrgansIdRoute
   '/api/a11oy/v1/spaces': typeof ApiA11oyV1SpacesRouteWithChildren
   '/api/a11oy/v1/spaces/health': typeof ApiA11oyV1SpacesHealthRoute
 }
@@ -247,6 +271,9 @@ export interface FileRoutesById {
   '/api/a11oy/v1/genome': typeof ApiA11oyV1GenomeRoute
   '/api/a11oy/v1/honest': typeof ApiA11oyV1HonestRoute
   '/api/a11oy/v1/ledger': typeof ApiA11oyV1LedgerRoute
+  '/api/a11oy/v1/organs': typeof ApiA11oyV1OrgansRouteWithChildren
+  '/api/a11oy/v1/organs/history': typeof ApiA11oyV1OrgansHistoryRoute
+  '/api/a11oy/v1/organs/$id': typeof ApiA11oyV1OrgansIdRoute
   '/api/a11oy/v1/spaces': typeof ApiA11oyV1SpacesRouteWithChildren
   '/api/a11oy/v1/spaces/health': typeof ApiA11oyV1SpacesHealthRoute
 }
@@ -276,6 +303,9 @@ export interface FileRouteTypes {
     | '/api/a11oy/v1/genome'
     | '/api/a11oy/v1/honest'
     | '/api/a11oy/v1/ledger'
+    | '/api/a11oy/v1/organs'
+    | '/api/a11oy/v1/organs/history'
+    | '/api/a11oy/v1/organs/$id'
     | '/api/a11oy/v1/spaces'
     | '/api/a11oy/v1/spaces/health'
   fileRoutesByTo: FileRoutesByTo
@@ -303,6 +333,9 @@ export interface FileRouteTypes {
     | '/api/a11oy/v1/genome'
     | '/api/a11oy/v1/honest'
     | '/api/a11oy/v1/ledger'
+    | '/api/a11oy/v1/organs'
+    | '/api/a11oy/v1/organs/history'
+    | '/api/a11oy/v1/organs/$id'
     | '/api/a11oy/v1/spaces'
     | '/api/a11oy/v1/spaces/health'
   id:
@@ -331,6 +364,9 @@ export interface FileRouteTypes {
     | '/api/a11oy/v1/genome'
     | '/api/a11oy/v1/honest'
     | '/api/a11oy/v1/ledger'
+    | '/api/a11oy/v1/organs'
+    | '/api/a11oy/v1/organs/history'
+    | '/api/a11oy/v1/organs/$id'
     | '/api/a11oy/v1/spaces'
     | '/api/a11oy/v1/spaces/health'
   fileRoutesById: FileRoutesById
@@ -345,6 +381,7 @@ export interface RootRouteChildren {
   ApiA11oyV1GenomeRoute: typeof ApiA11oyV1GenomeRoute
   ApiA11oyV1HonestRoute: typeof ApiA11oyV1HonestRoute
   ApiA11oyV1LedgerRoute: typeof ApiA11oyV1LedgerRoute
+  ApiA11oyV1OrgansRoute: typeof ApiA11oyV1OrgansRouteWithChildren
   ApiA11oyV1SpacesRoute: typeof ApiA11oyV1SpacesRouteWithChildren
 }
 
@@ -518,6 +555,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiA11oyV1LedgerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/a11oy/v1/organs': {
+      id: '/api/a11oy/v1/organs'
+      path: '/api/a11oy/v1/organs'
+      fullPath: '/api/a11oy/v1/organs'
+      preLoaderRoute: typeof ApiA11oyV1OrgansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/a11oy/v1/organs/history': {
+      id: '/api/a11oy/v1/organs/history'
+      path: '/history'
+      fullPath: '/api/a11oy/v1/organs/history'
+      preLoaderRoute: typeof ApiA11oyV1OrgansHistoryRouteImport
+      parentRoute: typeof ApiA11oyV1OrgansRoute
+    }
+    '/api/a11oy/v1/organs/$id': {
+      id: '/api/a11oy/v1/organs/$id'
+      path: '/$id'
+      fullPath: '/api/a11oy/v1/organs/$id'
+      preLoaderRoute: typeof ApiA11oyV1OrgansIdRouteImport
+      parentRoute: typeof ApiA11oyV1OrgansRoute
+    }
     '/api/a11oy/v1/spaces': {
       id: '/api/a11oy/v1/spaces'
       path: '/api/a11oy/v1/spaces'
@@ -594,6 +652,19 @@ const ApiA11oyV1SpacesRouteChildren: ApiA11oyV1SpacesRouteChildren = {
 const ApiA11oyV1SpacesRouteWithChildren =
   ApiA11oyV1SpacesRoute._addFileChildren(ApiA11oyV1SpacesRouteChildren)
 
+interface ApiA11oyV1OrgansRouteChildren {
+  ApiA11oyV1OrgansHistoryRoute: typeof ApiA11oyV1OrgansHistoryRoute
+  ApiA11oyV1OrgansIdRoute: typeof ApiA11oyV1OrgansIdRoute
+}
+
+const ApiA11oyV1OrgansRouteChildren: ApiA11oyV1OrgansRouteChildren = {
+  ApiA11oyV1OrgansHistoryRoute: ApiA11oyV1OrgansHistoryRoute,
+  ApiA11oyV1OrgansIdRoute: ApiA11oyV1OrgansIdRoute,
+}
+
+const ApiA11oyV1OrgansRouteWithChildren =
+  ApiA11oyV1OrgansRoute._addFileChildren(ApiA11oyV1OrgansRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   ShellRoute: ShellRouteWithChildren,
   HealthzRoute: HealthzRoute,
@@ -604,6 +675,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiA11oyV1GenomeRoute: ApiA11oyV1GenomeRoute,
   ApiA11oyV1HonestRoute: ApiA11oyV1HonestRoute,
   ApiA11oyV1LedgerRoute: ApiA11oyV1LedgerRoute,
+  ApiA11oyV1OrgansRoute: ApiA11oyV1OrgansRouteWithChildren,
   ApiA11oyV1SpacesRoute: ApiA11oyV1SpacesRouteWithChildren,
 }
 export const routeTree = rootRouteImport

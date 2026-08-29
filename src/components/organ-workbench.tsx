@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatusChip, EvidenceChip } from "@/components/truth-chip";
-import { ORGANS, runOrgan, type OrganDef, type OrganReceipt } from "@/lib/organs";
+import { ORGANS, type OrganDef, type OrganReceipt } from "@/lib/organs";
+import { loadOrganLedger, runOrganViaApi } from "@/lib/organ-ledger";
 
 export function OrganWorkbench() {
   const [active, setActive] = useState(ORGANS[0]!.id);
@@ -12,14 +13,16 @@ export function OrganWorkbench() {
   const [busy, setBusy] = useState(false);
   const [receipt, setReceipt] = useState<OrganReceipt | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState(() => loadOrganLedger().entries.slice(-6).reverse());
   const organ = useMemo(() => ORGANS.find((o) => o.id === active)!, [active]);
 
   async function run(def: OrganDef, text: string) {
     setBusy(true);
     setError(null);
     try {
-      const result = await runOrgan(def.id, { prompt: text });
+      const result = await runOrganViaApi(def.id, text);
       setReceipt(result);
+      setHistory(loadOrganLedger().entries.slice(-6).reverse());
     } catch (err) {
       setError(err instanceof Error ? err.message : "run failed");
     } finally {
@@ -62,7 +65,9 @@ export function OrganWorkbench() {
             <Badge>{organ.body}</Badge>
           </div>
           <CardTitle>{organ.title}</CardTitle>
-          <CardDescription>{organ.job}. Factory-live. Not a public Space. Formulas never grant authority.</CardDescription>
+          <CardDescription>
+            {organ.job}. POST /api/a11oy/v1/organs/{organ.id}. Not a public Space. Formulas never grant authority.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form
@@ -96,6 +101,27 @@ export function OrganWorkbench() {
               <ul className="space-y-1 text-xs text-subtle">
                 {receipt.limitations.map((item) => (
                   <li key={item}>{item}</li>
+                ))}
+              </ul>
+              <a
+                href={`/verify?hash=${receipt.hash}`}
+                className="inline-flex h-11 items-center text-sm text-accent underline-offset-4 hover:underline"
+              >
+                Verify this receipt
+              </a>
+            </div>
+          )}
+          {history.length > 0 && (
+            <div className="border-t border-border pt-4">
+              <p className="mb-2 font-mono text-[11px] uppercase tracking-wide text-subtle">Browser organ ledger</p>
+              <ul className="space-y-2">
+                {history.map((item) => (
+                  <li key={item.hash} className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                    <StatusChip value={item.status} />
+                    <span className="font-mono">{item.id}</span>
+                    <span>{item.title}</span>
+                    <span className="break-all font-mono text-subtle">{item.hash.slice(0, 16)}…</span>
+                  </li>
                 ))}
               </ul>
             </div>

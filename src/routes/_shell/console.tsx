@@ -10,6 +10,8 @@ import { genome } from "@/lib/honest";
 import { evaluatePolicy, shadowCompare } from "@/lib/policy";
 import { scenarios } from "@/lib/scenarios";
 import { verticalById } from "@/lib/data/registry";
+import { organCatalog } from "@/lib/organs";
+import { loadOrganLedger } from "@/lib/organ-ledger";
 
 export const Route = createFileRoute("/_shell/console")({
   component: ConsolePage,
@@ -27,6 +29,7 @@ function ConsolePage() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="observability">Observability</TabsTrigger>
           <TabsTrigger value="policy">Policy lab</TabsTrigger>
+          <TabsTrigger value="organs">Organs</TabsTrigger>
         </TabsList>
         <TabsContent value="overview">
           <Overview />
@@ -36,6 +39,9 @@ function ConsolePage() {
         </TabsContent>
         <TabsContent value="policy">
           <PolicyLab />
+        </TabsContent>
+        <TabsContent value="organs">
+          <OrganApi />
         </TabsContent>
       </Tabs>
     </Page>
@@ -222,6 +228,49 @@ function PolicyLab() {
               ))}
             </ul>
           </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function OrganApi() {
+  const catalog = organCatalog();
+  const ledger = loadOrganLedger();
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Organ API</CardTitle>
+          <CardDescription>
+            Workbench POSTs the same contract the catalog publishes. Not 25 public Spaces.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 font-mono text-xs text-muted">
+          {catalog.endpoints.map((item) => (
+            <p key={`${item.method}-${item.path}`}>
+              {item.method} {item.path}
+            </p>
+          ))}
+          <Link to="/frontier" className="inline-flex h-11 items-center text-sm text-accent underline-offset-4 hover:underline">
+            Open N1–N25 workbench
+          </Link>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Browser organ ledger</CardTitle>
+          <CardDescription>{ledger.entries.length} receipt{ledger.entries.length === 1 ? "" : "s"} in this browser.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {ledger.entries.slice(-8).reverse().map((item) => (
+            <div key={item.hash} className="flex flex-wrap items-center gap-2 border-t border-border pt-3 first:border-0 first:pt-0">
+              <StatusChip value={item.status} />
+              <span className="font-mono text-xs">{item.id}</span>
+              <span className="text-sm">{item.title}</span>
+            </div>
+          ))}
+          {ledger.entries.length === 0 && <p className="text-sm text-muted">Run an organ on Frontier to append a receipt.</p>}
         </CardContent>
       </Card>
     </div>

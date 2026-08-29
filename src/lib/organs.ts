@@ -353,6 +353,18 @@ const RUNNERS: Record<OrganId, Runner> = {
   },
 };
 
+const RUN_LOG: OrganReceipt[] = [];
+const RUN_LOG_CAP = 50;
+
+export function rememberOrganRun(receipt: OrganReceipt): void {
+  RUN_LOG.push(receipt);
+  if (RUN_LOG.length > RUN_LOG_CAP) RUN_LOG.splice(0, RUN_LOG.length - RUN_LOG_CAP);
+}
+
+export function recentOrganRuns(limit = 20): OrganReceipt[] {
+  return RUN_LOG.slice(-limit).reverse();
+}
+
 export function organById(id: string): OrganDef | undefined {
   return ORGANS.find((o) => o.id === id);
 }
@@ -362,8 +374,17 @@ export async function runOrgan(id: string, input: OrganInput = {}): Promise<Orga
   if (!def) {
     throw new Error(`unknown organ ${id}`);
   }
-  return RUNNERS[def.id](def, input);
+  const result = await RUNNERS[def.id](def, input);
+  rememberOrganRun(result);
+  return result;
 }
+
+export const ORGAN_ENDPOINTS = [
+  { method: "GET", path: "/api/a11oy/v1/organs", purpose: "catalog + recent runs" },
+  { method: "GET", path: "/api/a11oy/v1/organs/{id}", purpose: "single organ contract" },
+  { method: "POST", path: "/api/a11oy/v1/organs/{id}", purpose: "execute organ, hashed receipt" },
+  { method: "GET", path: "/api/a11oy/v1/organs/history", purpose: "process-local run log" },
+] as const;
 
 export function organCatalog() {
   return {
@@ -371,6 +392,14 @@ export function organCatalog() {
     honesty: "LIVE" as const,
     count: ORGANS.length,
     admitted_public: false,
+    endpoints: ORGAN_ENDPOINTS,
+    recent: recentOrganRuns(8).map((r) => ({
+      id: r.id,
+      title: r.title,
+      status: r.status,
+      hash: r.hash,
+      created_at: r.created_at,
+    })),
     items: ORGANS.map((o) => ({
       id: o.id,
       title: o.title,
@@ -378,6 +407,7 @@ export function organCatalog() {
       job: o.job,
       honesty: o.honesty,
       evidence_class: o.evidence_class,
+      run: `POST /api/a11oy/v1/organs/${o.id}`,
     })),
     note: "N1–N25 execute in this factory. Not 25 public Spaces. GPU tune remains UNAVAILABLE.",
   };

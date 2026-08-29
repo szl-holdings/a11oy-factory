@@ -34,6 +34,7 @@ function TrustPage() {
             <p>locked_formula_count: 8</p>
             <p>production_ready: false</p>
             <p>product_origin: LIVE_PRODUCT_ORIGIN</p>
+            <p>organs: 25 LIVE</p>
             <p>signer: ABSENT</p>
             <p>nexus: CLASSIFIED_A11OY_INCUBATOR</p>
             <p>admission_freeze: LIFTED_BY_OWNER</p>
