@@ -45,7 +45,7 @@ def _sha256(payload: dict) -> str:
 
 
 def compile_cell(cell_id: str, *, prev_hash: str = GENESIS, signal: str = "") -> CompileReceipt:
-    """Admit Lyte. Refuse N1–N25 and unknown ids. Never fabricates LIVE."""
+    """Admit Lyte. Refuse N1–N26 and unknown ids. Never fabricates LIVE."""
     key = (cell_id or "").strip()
     cell: Cell | None = resolve_cell(key)
     ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

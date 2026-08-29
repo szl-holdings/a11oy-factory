@@ -162,6 +162,18 @@ def _energy(payload: dict) -> dict:
     }
 
 
+def _inference(payload: dict) -> dict:
+    return {
+        "energy_j": None,
+        "channel": "LIVE",
+        "honesty": "REPORTED",
+        "reason": (
+            "Inference joule is REPORTED from command-lab /api/energy/inference. "
+            "Not MEASURED on this CPU factory. Never a fabricated joule."
+        ),
+    }
+
+
 def _tool(payload: dict) -> dict:
     method = str(payload.get("method") or "")
     name = str(payload.get("name") or (payload.get("params") or {}).get("name") or "")
@@ -306,6 +318,7 @@ _HANDLERS = {
     "N23": _rails,
     "N24": _browser,
     "N25": _policy,
+    "N26": _inference,
 }
 
 
@@ -357,6 +370,10 @@ def act(cell_id: str, payload: dict | None = None) -> dict:
         body["live"] = False
         if cell and cell.id == "N13":
             body["honesty"] = "UNAVAILABLE"
+            body["energy"] = None
+            body["energy_j"] = None
+        if cell and cell.id == "N26":
+            body["honesty"] = "REPORTED"
             body["energy"] = None
             body["energy_j"] = None
     body["ts"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

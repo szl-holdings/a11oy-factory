@@ -17,7 +17,7 @@ class CompilerTests(unittest.TestCase):
         self.assertEqual(len(rec.hash), 64)
 
     def test_frontiers_are_named_and_blocked_roadmap(self):
-        self.assertEqual(len(FRONTIERS), 25)
+        self.assertEqual(len(FRONTIERS), 26)
         expected = {
             "N1": "Serve",
             "N2": "Graph",
@@ -44,6 +44,7 @@ class CompilerTests(unittest.TestCase):
             "N23": "Rails",
             "N24": "Browser",
             "N25": "Policy",
+            "N26": "Inference",
         }
         for cell in FRONTIERS:
             self.assertEqual(cell.title, expected[cell.id])
@@ -54,6 +55,8 @@ class CompilerTests(unittest.TestCase):
             self.assertEqual(rec.decision, BLOCKED)
             if cell.id == "N13":
                 self.assertEqual(rec.honesty_tier, "UNAVAILABLE")
+            elif cell.id == "N26":
+                self.assertEqual(rec.honesty_tier, "REPORTED")
             else:
                 self.assertEqual(rec.honesty_tier, "ROADMAP")
             self.assertIn(cell.title, rec.note)
@@ -151,6 +154,12 @@ class CompilerTests(unittest.TestCase):
         self.assertEqual(energy["jobs"][0]["honesty"], "UNAVAILABLE")
         self.assertIsNone(energy["energy"])
 
+        wrap = search_jobs("wrapped inference")
+        self.assertTrue(wrap["jobs"])
+        self.assertEqual(wrap["jobs"][0]["cell"], "N26")
+        self.assertEqual(wrap["jobs"][0]["honesty"], "REPORTED")
+        self.assertFalse(wrap["jobs"][0]["admitted"])
+
     def test_search_empty_returns_catalog(self):
         all_jobs = search_jobs("")
         self.assertGreaterEqual(len(all_jobs["jobs"]), len(JOBS))
@@ -199,6 +208,13 @@ class CompilerTests(unittest.TestCase):
         self.assertEqual(rec.cell, "N24")
         rec = compile_cell("cedar")
         self.assertEqual(rec.cell, "N25")
+        self.assertEqual(rec.decision, BLOCKED)
+        rec = compile_cell("n26")
+        self.assertEqual(rec.cell, "N26")
+        self.assertEqual(rec.decision, BLOCKED)
+        self.assertEqual(rec.honesty_tier, "REPORTED")
+        rec = compile_cell("wrapped joule")
+        self.assertEqual(rec.cell, "N26")
         self.assertEqual(rec.decision, BLOCKED)
 
     def test_typo_tolerant_search(self):

@@ -1,6 +1,6 @@
 """Admitted and ROADMAP decision cells. Fail closed on anything else.
 
-N1–N25 are named category-capture theatres. We cite the leader of the job
+N1–N26 are named category-capture theatres. We cite the leader of the job
 and take the job, not the code. Compiler refuses admission until doctrine
 names a cell LIVE. Lyte is the only admitted cell.
 """
@@ -14,6 +14,7 @@ Honesty = Literal[
     "STRUCTURAL-ONLY",
     "ROADMAP",
     "CONJECTURE",
+    "REPORTED",
     "UNAVAILABLE",
 ]
 
@@ -346,6 +347,25 @@ FRONTIERS: tuple[Cell, ...] = (
         ),
         szl="SENTRA policy. Unknown action fail closed. Not a Cedar/OPA rehost.",
     ),
+    Cell(
+        id="N26",
+        title="Inference",
+        organ="nervous",
+        honesty="REPORTED",
+        admitted=False,
+        bind="BIND_AS_A11OY_PACKAGE",
+        job="wrapped inference joule",
+        cite="szl-command-lab GET /api/energy/inference NVML wrap on T4; Intel RAPL package wrap",
+        szl=(
+            "Joule is REPORTED from the command-lab wrap, never MEASURED on this CPU factory. "
+            "Not a second meter. Not an elevation. Compiler stays BLOCKED."
+        ),
+        note=(
+            "Inference joule is the NVML/RAPL delta around a wrapped kernel on command-lab. "
+            "This factory box has no meter. Honesty is REPORTED, not MEASURED. "
+            "Never a fabricated joule. Compiler refuses admission."
+        ),
+    ),
 )
 
 CELLS: dict[str, Cell] = {LYTE.id: LYTE, **{c.id: c for c in FRONTIERS}}
@@ -427,6 +447,9 @@ _ALIASES: dict[str, str] = {
     "policy": "N25",
     "cedar": "N25",
     "opa": "N25",
+    "inference wrap": "N26",
+    "wrapped joule": "N26",
+    "n26": "N26",
 }
 
 
