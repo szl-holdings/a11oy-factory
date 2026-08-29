@@ -37,7 +37,7 @@ export function buildHonest(): HonestContract {
       signer: OWNER_CERT.measured.signer,
     },
     truth:
-      "Owner order AO-2026-08-29-002 certifies a-11-oy.com as LIVE_PRODUCT_ORIGIN (HTTP 200, health ok, doctrine v11 LOCKED). Signer remains ABSENT — DSSE and FedRAMP are not certified. Factory runtime stays production_ready=false. Nexus is an A11oy incubator package. Lyte is the admitted protected design-partner cell.",
+      "Owner order AO-2026-08-29-002 certifies a-11-oy.com as LIVE_PRODUCT_ORIGIN (HTTP 200, health ok, doctrine v11 LOCKED). N1–N25 organs execute in this factory with hashed receipts. Signer remains ABSENT — DSSE and FedRAMP are not certified. Factory runtime stays production_ready=false. Nexus is an A11oy incubator package. Lyte is the admitted protected design-partner cell.",
     generated_at: new Date().toISOString(),
   };
 }

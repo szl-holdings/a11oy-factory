@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Page } from "@/components/app-shell";
 import { FrontierWorkbench } from "@/components/frontier-workbench";
+import { OrganWorkbench } from "@/components/organ-workbench";
 import { OwnerOrderBanner } from "@/components/owner-order-banner";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { OWNER_ORDER } from "@/lib/admission";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ORGANS } from "@/lib/organs";
 
 export const Route = createFileRoute("/_shell/frontier")({
   component: FrontierPage,
@@ -12,34 +13,26 @@ export const Route = createFileRoute("/_shell/frontier")({
 function FrontierPage() {
   return (
     <Page
-      kicker="Frontier program"
-      title="Green light approved. N1–N8 is live."
-      lede="Owner order AO-2026-08-29-001 is approved. Eight programs, one runtime. No new public forks."
+      kicker="Frontier organs"
+      title="N1–N25 is live."
+      lede="Twenty-five category organs run in this factory: front end, back end, hashed receipts. Not 25 public Spaces. GPU tune stays UNAVAILABLE."
     >
       <OwnerOrderBanner />
-      <div className="mt-10">
-        <FrontierWorkbench />
+      <p className="mt-4 font-mono text-xs text-subtle">{ORGANS.length} organs · honesty LIVE · public admission false</p>
+      <div className="mt-8">
+        <Tabs defaultValue="organs">
+          <TabsList className="flex w-full flex-wrap justify-start">
+            <TabsTrigger value="organs">N1–N25 organs</TabsTrigger>
+            <TabsTrigger value="packet6">Packet 6 compiler</TabsTrigger>
+          </TabsList>
+          <TabsContent value="organs" className="mt-6">
+            <OrganWorkbench />
+          </TabsContent>
+          <TabsContent value="packet6" className="mt-6">
+            <FrontierWorkbench />
+          </TabsContent>
+        </Tabs>
       </div>
-      <Card className="mt-10">
-        <CardHeader>
-          <CardTitle>Order remaining closed</CardTitle>
-          <CardDescription>
-            Green light is not a production certificate and not a Hub mutation.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-2 text-sm text-muted">
-            {OWNER_ORDER.still_prohibits.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-          <ul className="mt-4 space-y-1 text-xs text-subtle">
-            {OWNER_ORDER.truth_boundary.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
     </Page>
   );
 }
