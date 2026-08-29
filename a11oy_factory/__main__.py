@@ -10,11 +10,11 @@ from .jobs import search_jobs
 def main() -> int:
     p = argparse.ArgumentParser(prog="a11oy-factory")
     sub = p.add_subparsers(dest="cmd", required=True)
-    c = sub.add_parser("compile", help="Compile a decision cell (Lyte admitted; N1–N12 ROADMAP)")
+    c = sub.add_parser("compile", help="Compile a decision cell (Lyte admitted; N1–N21 ROADMAP)")
     c.add_argument("--cell", required=True)
     c.add_argument("--signal", default="")
     s = sub.add_parser("search", help="Search cited jobs versus SZL organs")
-    s.add_argument("--q", default="", help="Catalog query (vllm, llamaindex, phoenix, unsloth, ...)")
+    s.add_argument("--q", default="", help="Catalog query (vllm, mcp, litellm, lmcache, livekit, daytona, ...)")
     args = p.parse_args()
     if args.cmd == "search":
         print(json.dumps(search_jobs(args.q), indent=2))

@@ -17,7 +17,7 @@ class CompilerTests(unittest.TestCase):
         self.assertEqual(len(rec.hash), 64)
 
     def test_frontiers_are_named_and_blocked_roadmap(self):
-        self.assertEqual(len(FRONTIERS), 13)
+        self.assertEqual(len(FRONTIERS), 21)
         expected = {
             "N1": "Serve",
             "N2": "Graph",
@@ -32,6 +32,14 @@ class CompilerTests(unittest.TestCase):
             "N11": "Tune",
             "N12": "Schema",
             "N13": "Energy",
+            "N14": "Tool",
+            "N15": "Memory",
+            "N16": "Eval",
+            "N17": "Mesh",
+            "N18": "Route",
+            "N19": "Cache",
+            "N20": "Voice",
+            "N21": "Sandbox",
         }
         for cell in FRONTIERS:
             self.assertEqual(cell.title, expected[cell.id])
@@ -92,6 +100,32 @@ class CompilerTests(unittest.TestCase):
         energy_cell = search_jobs("nvml")
         self.assertTrue(any(c["id"] == "N13" for c in energy_cell["cells"]))
 
+        tool = search_jobs("mcp")
+        self.assertEqual(tool["jobs"][0]["cell"], "N14")
+        self.assertIn("Do not rehost", tool["jobs"][0]["refuse"])
+
+        memory = search_jobs("mem0")
+        self.assertEqual(memory["jobs"][0]["cell"], "N15")
+
+        ev = search_jobs("ragas")
+        self.assertEqual(ev["jobs"][0]["cell"], "N16")
+
+        mesh = search_jobs("dynamo")
+        self.assertEqual(mesh["jobs"][0]["cell"], "N17")
+
+        route = search_jobs("litellm")
+        self.assertEqual(route["jobs"][0]["cell"], "N18")
+        self.assertIn("Do not rehost", route["jobs"][0]["refuse"])
+
+        cache = search_jobs("lmcache")
+        self.assertEqual(cache["jobs"][0]["cell"], "N19")
+
+        voice = search_jobs("livekit")
+        self.assertEqual(voice["jobs"][0]["cell"], "N20")
+
+        sand = search_jobs("daytona")
+        self.assertEqual(sand["jobs"][0]["cell"], "N21")
+
         sig = search_jobs("sigstore")
         self.assertEqual(sig["jobs"][0]["honesty"], "STRUCTURAL-ONLY")
         self.assertEqual(sig["jobs"][0]["cell"], "")
@@ -121,6 +155,25 @@ class CompilerTests(unittest.TestCase):
         self.assertEqual(rec.cell, "N13")
         self.assertEqual(rec.decision, BLOCKED)
         self.assertEqual(rec.honesty_tier, "UNAVAILABLE")
+        rec = compile_cell("mcp")
+        self.assertEqual(rec.cell, "N14")
+        self.assertEqual(rec.decision, BLOCKED)
+        rec = compile_cell("mem0")
+        self.assertEqual(rec.cell, "N15")
+        rec = compile_cell("eval")
+        self.assertEqual(rec.cell, "N16")
+        rec = compile_cell("dynamo")
+        self.assertEqual(rec.cell, "N17")
+        self.assertEqual(rec.decision, BLOCKED)
+        rec = compile_cell("litellm")
+        self.assertEqual(rec.cell, "N18")
+        rec = compile_cell("lmcache")
+        self.assertEqual(rec.cell, "N19")
+        rec = compile_cell("livekit")
+        self.assertEqual(rec.cell, "N20")
+        rec = compile_cell("daytona")
+        self.assertEqual(rec.cell, "N21")
+        self.assertEqual(rec.decision, BLOCKED)
 
     def test_typo_tolerant_search(self):
         vlm = search_jobs("vlm")

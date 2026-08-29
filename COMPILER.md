@@ -3,11 +3,11 @@
 BIND_AS_A11OY_PACKAGE. Not a second flagship.
 
 The Grok App Builder control plane stays at the repo root. This package is
-the fail-closed compiler that admits **Lyte** and refuses **N1–N12**.
+the fail-closed compiler that admits **Lyte** and refuses **N1–N21**.
 
-N1–N12 are named category-capture theatres. We cite the leader of the job
+N1–N21 are named category-capture theatres. We cite the leader of the job
 and take the job, not the code. Compiling a frontier returns BLOCKED / ROADMAP
-until doctrine names that cell LIVE.
+(or UNAVAILABLE for Energy) until doctrine names that cell LIVE.
 
 | Surface | Honesty |
 |---|---|
@@ -25,8 +25,16 @@ until doctrine names that cell LIVE.
 | N10 Observe (Phoenix / LangSmith / Langfuse / DeepEval job) | ROADMAP |
 | N11 Tune (Unsloth QLoRA job) | ROADMAP |
 | N12 Schema (Outlines / Instructor job) | ROADMAP |
+| N13 Energy (RAPL / NVML joule channel) | UNAVAILABLE |
+| N14 Tool (Anthropic MCP job) | ROADMAP |
+| N15 Memory (Mem0 / Zep Graphiti job) | ROADMAP |
+| N16 Eval (RAGAS / HELM / Arena job) | ROADMAP |
+| N17 Mesh (Dynamo / Ray Serve / llm-d job) | ROADMAP |
+| N18 Route (LiteLLM / OpenRouter / RouteLLM job) | ROADMAP |
+| N19 Cache (LMCache / Mooncake / GPTCache job) | ROADMAP |
+| N20 Voice (LiveKit / Cartesia / Deepgram job) | ROADMAP |
+| N21 Sandbox (Daytona / E2B job) | ROADMAP |
 | Sigstore / Cosign | STRUCTURAL-ONLY (hash is tamper-evident, not a signature) |
-| Energy | UNAVAILABLE |
 | Λ uniqueness | Conjecture 1 OPEN |
 | Signing | UNSIGNED-honest SHA-256 |
 
