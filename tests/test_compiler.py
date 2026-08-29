@@ -16,7 +16,7 @@ class CompilerTests(unittest.TestCase):
         self.assertIsNone(rec.energy)
         self.assertEqual(len(rec.hash), 64)
 
-    def test_frontiers_are_named_and_blocked_roadmap(self):
+    def test_frontiers_are_named_factory_live_hub_blocked(self):
         self.assertEqual(len(FRONTIERS), 26)
         expected = {
             "N1": "Serve",
@@ -58,7 +58,7 @@ class CompilerTests(unittest.TestCase):
             elif cell.id == "N26":
                 self.assertEqual(rec.honesty_tier, "REPORTED")
             else:
-                self.assertEqual(rec.honesty_tier, "ROADMAP")
+                self.assertEqual(rec.honesty_tier, "LIVE")
             self.assertIn(cell.title, rec.note)
 
     def test_unknown_fails_closed(self):
