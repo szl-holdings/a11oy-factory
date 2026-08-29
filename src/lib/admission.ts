@@ -31,7 +31,9 @@ export const OWNER_ORDER = {
   },
   still_prohibits: [
     "new top-level product name",
-    "production certification of a-11-oy.com",
+    "DSSE signing claims while signer is ABSENT",
+    "FedRAMP / IL5 / ATO accreditation",
+    "Killinchu public production_ready=true",
     "Hub visibility mutation from this runtime",
   ] as const,
   effects: {
@@ -59,9 +61,36 @@ export const OWNER_ORDER = {
     "Hugging Face Space SZLHOLDINGS/a11oy-factory is published private via szl-experiments. Docker metadata is fetching; this is not a production certificate.",
     "Formulas still never grant authority.",
     "Killinchu remains the only public synthetic reference.",
-    "Green light is an owner admission decision, not a production certificate of a-11-oy.com.",
+    "Green light is an owner admission decision. a-11-oy.com is certified LIVE_PRODUCT_ORIGIN from measured probes; DSSE signing and FedRAMP remain uncertified.",
   ] as const,
 };
+
+export const OWNER_CERT = {
+  schema: "szl.owner-product-origin-cert/v1" as const,
+  order_id: "AO-2026-08-29-002",
+  issued_at: "2026-08-29T15:56:00.000Z",
+  actor: "estate owner / CTO overlay",
+  instruction: "Certify a-11-oy.com as the LIVE product origin front door from measured probes.",
+  certification: "LIVE_PRODUCT_ORIGIN" as const,
+  measured: {
+    product_url: "https://a-11-oy.com",
+    proof_url: "https://a11oy.net",
+    http: 200,
+    health: "ok",
+    doctrine: "v11 LOCKED 749/14/163 @ c7c0ba17",
+    honest_git_sha: "9208362d2a510f2d23f6a1bc80ee82ecf5dd580e",
+    signer: "ABSENT",
+    locked_formulas: ["F1", "F4", "F7", "F11", "F12", "F18", "F19", "F22"],
+    lambda: "Conjecture 1 — not a theorem",
+    evidence_class: "MEASURED" as const,
+  },
+  not_certified: [
+    "DSSE / persistent signer",
+    "FedRAMP / IL5 / ATO",
+    "Killinchu public production_ready",
+    "this factory runtime (a11oy-factory remains production_ready=false)",
+  ],
+} as const;
 
 export type OwnerOrder = typeof OWNER_ORDER;
 
@@ -245,8 +274,10 @@ export function currentAdmission() {
       production_ready: false as const,
       github: OWNER_ORDER.github,
       huggingface: OWNER_ORDER.huggingface,
+      product_origin: OWNER_CERT.certification,
     },
     order: OWNER_ORDER,
+    cert: OWNER_CERT,
     receipt: receipt
       ? {
           decision_id: receipt.decision_id,

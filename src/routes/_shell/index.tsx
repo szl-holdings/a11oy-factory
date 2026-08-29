@@ -45,8 +45,7 @@ function Home() {
               </Button>
             </div>
             <p className="mt-6 max-w-xl text-sm text-subtle">
-              Source is public at szl-holdings/a11oy-factory. Hugging Face Space is prepared, not
-              live. a-11-oy.com is not certified. Formulas still never grant authority.
+              Source is public at szl-holdings/a11oy-factory. a-11-oy.com is certified LIVE_PRODUCT_ORIGIN. Signer ABSENT. FedRAMP uncertified. Formulas never grant authority.
             </p>
           </div>
           <div className="space-y-4">

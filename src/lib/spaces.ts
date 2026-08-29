@@ -25,7 +25,7 @@ export interface SpaceConfig {
 const SHARED_LIMITS = [
   "Formulas never grant authority.",
   "This configuration does not mutate Hub until HF_TOKEN is present.",
-  "a-11-oy.com is not certified by a Space card.",
+  "a-11-oy.com is LIVE_PRODUCT_ORIGIN (AO-2026-08-29-002). DSSE signer ABSENT. FedRAMP uncertified.",
 ];
 
 export const CANONICAL_PUBLIC_SIX = [
