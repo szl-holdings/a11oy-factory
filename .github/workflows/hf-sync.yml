@@ -8,21 +8,25 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HF_TOKEN: ${{ secrets.HF_ORG_TOKEN || secrets.HF_TOKEN }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
           persist-credentials: false
-      - name: Push protected Docker Space
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          if [ -z "$HF_TOKEN" ]; then
-            echo "HF_TOKEN is not set. Space cards stay PREPARED_NOT_LIVE. No Hub mutation."
-            exit 0
-          fi
-          echo "Target Space SZLHOLDINGS/a11oy-factory must stay protected. Do not pin."
-          git config user.name "szl-factory"
-          git config user.email "factory@szl-holdings"
-          git remote add hf "https://huggingface.co/spaces/SZLHOLDINGS/a11oy-factory" || true
-          git push "https://oauth2:${HF_TOKEN}@huggingface.co/spaces/SZLHOLDINGS/a11oy-factory" HEAD:main --force
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Hugging Face client
+        run: >-
+          python -m pip install --disable-pip-version-check
+          "huggingface_hub==1.23.0"
+
+      - name: Create protected factory Space
+        run: python .github/scripts/publish_factory_space.py

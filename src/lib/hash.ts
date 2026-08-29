@@ -27,12 +27,17 @@ export async function sha256Json(value: unknown): Promise<string> {
   return sha256Hex(canonicalJson(value) + "\n");
 }
 
-export async function digestText(input: string): Promise<string> {
-  if (globalThis.crypto?.subtle) return sha256Hex(input);
+export function sha256HexSyncFallback(input: string): string {
+  // FNV-1a 64-bit hex — used only if SubtleCrypto is unavailable.
   let h = 0xcbf29ce484222325n;
   for (let i = 0; i < input.length; i++) {
     h ^= BigInt(input.charCodeAt(i));
     h = (h * 0x100000001b3n) & 0xffffffffffffffffn;
   }
   return h.toString(16).padStart(16, "0").repeat(4).slice(0, 64);
+}
+
+export async function digestText(input: string): Promise<string> {
+  if (globalThis.crypto?.subtle) return sha256Hex(input);
+  return sha256HexSyncFallback(input);
 }
