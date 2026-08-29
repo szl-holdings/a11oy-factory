@@ -174,6 +174,18 @@ def _inference(payload: dict) -> dict:
     }
 
 
+def _train(payload: dict) -> dict:
+    return {
+        "trained": False,
+        "weights": None,
+        "honesty": "UNAVAILABLE",
+        "reason": (
+            "GPU train BLOCKED. CUDA runtime absent on the command-lab hologram. "
+            "Registry NOT_APPROVED. gpu-bridge NEVER_DISPATCH. Never a fabricated train."
+        ),
+    }
+
+
 def _tool(payload: dict) -> dict:
     method = str(payload.get("method") or "")
     name = str(payload.get("name") or (payload.get("params") or {}).get("name") or "")
@@ -319,6 +331,7 @@ _HANDLERS = {
     "N24": _browser,
     "N25": _policy,
     "N26": _inference,
+    "N27": _train,
 }
 
 
@@ -376,6 +389,10 @@ def act(cell_id: str, payload: dict | None = None) -> dict:
             body["honesty"] = "REPORTED"
             body["energy"] = None
             body["energy_j"] = None
+        if cell and cell.id == "N27":
+            body["honesty"] = "UNAVAILABLE"
+            body["trained"] = False
+            body["weights"] = None
     body["ts"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     body["id"] = str(uuid.uuid4())
     sealed = {k: body[k] for k in body if k != "hash"}

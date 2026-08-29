@@ -427,6 +427,18 @@ JOBS: tuple[Job, ...] = (
         refuse="Do not fabricate joules. Do not claim MEASURED on this CPU factory. Do not elevate proven_trust.",
     ),
     Job(
+        id="gpu-train",
+        title="Receipted GPU train gate",
+        leader="szl-forge Unsloth / szl-gpu-bridge",
+        url="https://github.com/szl-holdings/szl-forge",
+        organ="brain",
+        cell="N27",
+        honesty="UNAVAILABLE",
+        admitted=False,
+        take="Owner-metal QLoRA. T4 NVML is a meter. Train stays BLOCKED without CUDA + approved job.",
+        refuse="Do not fabricate a train. Do not approve willay/khipu-r3/waman. Do not rehost Unsloth.",
+    ),
+    Job(
         id="mcp",
         title="Agent tool protocol",
         leader="Anthropic MCP",

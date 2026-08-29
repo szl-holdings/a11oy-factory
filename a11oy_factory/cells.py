@@ -1,6 +1,6 @@
 """Admitted and LIVE factory organs. Fail closed on anything else.
 
-N1–N26 are named category-capture theatres. We cite the leader of the job
+N1–N27 are named category-capture theatres. We cite the leader of the job
 and take the job, not the code. Compiler refuses admission until doctrine
 names a cell LIVE. Lyte is the only admitted cell.
 """
@@ -366,6 +366,25 @@ FRONTIERS: tuple[Cell, ...] = (
             "Never a fabricated joule. Compiler refuses admission."
         ),
     ),
+    Cell(
+        id="N27",
+        title="Train",
+        organ="brain",
+        honesty="UNAVAILABLE",
+        admitted=False,
+        bind="BIND_AS_A11OY_PACKAGE",
+        job="receipted GPU train gate",
+        cite="szl-forge Unsloth QLoRA on owner metal; szl-gpu-bridge DSSE jobspecs; command-lab GET /api/train",
+        szl=(
+            "NVML is a meter, not a trainer. This hologram has no CUDA runtime. "
+            "WILLAY/KHIPU-R3/Waman stay NOT_APPROVED. Not an Unsloth rehost. Compiler stays BLOCKED."
+        ),
+        note=(
+            "Train. GPU train is UNAVAILABLE until CUDA exists in the hologram AND a registry job is approved "
+            "with rights, exact revisions, image digest, cost cap, and job command. "
+            "gpu-bridge attempts 1–9 are NEVER_DISPATCH. Never a fabricated train."
+        ),
+    ),
 )
 
 CELLS: dict[str, Cell] = {LYTE.id: LYTE, **{c.id: c for c in FRONTIERS}}
@@ -450,6 +469,9 @@ _ALIASES: dict[str, str] = {
     "inference wrap": "N26",
     "wrapped joule": "N26",
     "n26": "N26",
+    "gpu train": "N27",
+    "fully trained": "N27",
+    "n27": "N27",
 }
 
 
