@@ -89,7 +89,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 55
     env:
-      HF_HOME: ${{ runner.temp }}/a11oy-hf-cache
+      HF_HOME: /tmp/a11oy-hf-cache
       HF_HUB_DISABLE_TELEMETRY: "1"
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
       PYTHONUNBUFFERED: "1"
