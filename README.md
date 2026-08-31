@@ -8,7 +8,7 @@ app_port: 7860
 pinned: false
 license: apache-2.0
 suggested_hardware: cpu-basic
-short_description: Governed AI distribution compiler — locks, policy, SBOM, provenance, receipts.
+short_description: Governed AI distribution with verifiable proof.
 ---
 
 # A11oy Factory
