@@ -4,8 +4,9 @@
   "target": "linux-amd64-cpu",
   "distribution_profile": "vllm-cpu-amd64",
   "runtime_component": "vllm-cpu-amd64",
+  "torch_component": "pytorch-cpu-amd64",
   "expected_vllm_version": "0.28.0",
-  "expected_torch_version": "2.13.0",
+  "expected_torch_version": "2.13.0+cpu",
   "model": {
     "id": "HuggingFaceTB/SmolLM2-135M-Instruct",
     "revision": "12fd25f77366fa6b3b4b768ec3050bf629380bac",
@@ -34,6 +35,7 @@
   },
   "assurance": {
     "required": [
+      "PINNED_TORCH_WHEEL",
       "PINNED_RUNTIME_WHEEL",
       "NATIVE_EXTENSION_IMPORT",
       "PINNED_MODEL_REVISION",
