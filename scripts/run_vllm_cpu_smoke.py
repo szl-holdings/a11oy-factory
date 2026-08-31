@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import importlib
 import importlib.metadata
+import importlib.util
 import json
 import os
 import platform
@@ -14,6 +14,12 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+
+def _event(name: str, **fields: Any) -> None:
+    """Emit a flushed, machine-readable progress breadcrumb."""
+
+    print(json.dumps({"event": name, **fields}, sort_keys=True, default=str), flush=True)
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -114,10 +120,95 @@ def _validate_contract(spec: dict[str, Any], materialization: dict[str, Any]) ->
     }
 
 
+def _cpu_feature(torch_module: Any, name: str) -> bool:
+    feature = getattr(getattr(torch_module, "cpu", None), name, None)
+    if not callable(feature):
+        return False
+    try:
+        return bool(feature())
+    except Exception as exc:
+        raise RuntimeError(f"unable to evaluate torch.cpu.{name}(): {exc}") from exc
+
+
+def _select_cpu_native_variant(torch_module: Any, machine: str | None = None) -> str:
+    """Mirror vLLM's x86 CPU extension selection without importing a DSO."""
+
+    normalized = (machine or platform.machine()).strip().lower()
+    if normalized not in {"x86_64", "amd64"}:
+        return "_C"
+    if _cpu_feature(torch_module, "_is_avx512_supported"):
+        if _cpu_feature(torch_module, "_is_avx512_bf16_supported"):
+            return "_C"
+        return "_C_AVX512"
+    return "_C_AVX2"
+
+
+def _load_cpu_native_kernels(torch_module: Any, current_platform: Any) -> dict[str, Any]:
+    """Let vLLM perform its own ISA dispatch, then prove CPU ops registered."""
+
+    machine = platform.machine().strip().lower()
+    selected_variant = _select_cpu_native_variant(torch_module, machine)
+    selected_module = f"vllm.{selected_variant}"
+    selected_spec = importlib.util.find_spec(selected_module)
+    selected_path = str(getattr(selected_spec, "origin", "") or "")
+    if selected_spec is None or not selected_path.endswith((".so", ".pyd")):
+        raise RuntimeError(
+            f"selected vLLM CPU extension is missing or not native: {selected_module!r} {selected_path!r}"
+        )
+
+    features = {
+        "machine": machine,
+        "avx512": _cpu_feature(torch_module, "_is_avx512_supported"),
+        "avx512_bf16": _cpu_feature(torch_module, "_is_avx512_bf16_supported"),
+        "selected_variant": selected_variant,
+        "selected_module": selected_module,
+        "selected_path": selected_path,
+    }
+    _event("native_dispatch_selected", **features)
+
+    # This module invokes current_platform.import_kernels(), which is the
+    # upstream vLLM entry point that selects _C, _C_AVX512, or _C_AVX2. The
+    # alternate ISA libraries intentionally export Torch ops under namespace
+    # _C and may raise a caught PyInit-name ImportError after registration.
+    from vllm.kernels import vllm_c as _native_bootstrap  # noqa: F401
+
+    ops_namespace = getattr(torch_module.ops, "_C", None)
+    registered_ops = [
+        name
+        for name in ("cpu_attn_has_isa", "cpu_attention_with_kv_cache", "placeholder_op")
+        if ops_namespace is not None and hasattr(ops_namespace, name)
+    ]
+    if "cpu_attn_has_isa" not in registered_ops:
+        raise RuntimeError(
+            "vLLM selected a CPU extension but the expected torch.ops._C CPU kernels were not registered"
+        )
+
+    mapped = False
+    maps_path = Path("/proc/self/maps")
+    if maps_path.is_file():
+        selected_name = Path(selected_path).name
+        mapped = selected_name in maps_path.read_text(encoding="utf-8", errors="replace")
+
+    result = {
+        **features,
+        "registered_ops": registered_ops,
+        "selected_extension_mapped": mapped,
+        "dispatch": "vllm.current_platform.import_kernels",
+    }
+    _event("native_dispatch_verified", **result)
+    return result
+
+
 def execute(spec_path: Path, materialization_path: Path, output_path: Path) -> dict[str, Any]:
     spec = _read_json(spec_path)
     materialization = _read_json(materialization_path)
     wheels = _validate_contract(spec, materialization)
+    _event(
+        "runtime_contract_verified",
+        lock_digest=wheels["lock_digest"],
+        runtime_component=wheels["vllm"]["component"],
+        torch_component=wheels["torch"]["component"],
+    )
 
     inference = spec["inference"]
     model_contract = spec["model"]
@@ -132,8 +223,32 @@ def execute(spec_path: Path, materialization_path: Path, output_path: Path) -> d
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
     os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
 
+    vllm_version = importlib.metadata.version("vllm")
+    torch_version = importlib.metadata.version("torch")
+    if vllm_version != str(spec["expected_vllm_version"]):
+        raise RuntimeError(
+            f"vLLM version mismatch: observed={vllm_version!r} expected={spec['expected_vllm_version']!r}"
+        )
+    if torch_version != str(spec["expected_torch_version"]):
+        raise RuntimeError(
+            f"PyTorch version mismatch: observed={torch_version!r} expected={spec['expected_torch_version']!r}"
+        )
+    _event("runtime_versions_verified", torch=torch_version, vllm=vllm_version)
+
+    import torch
+    from vllm.platforms import current_platform
+
+    device_type = str(getattr(current_platform, "device_type", "") or "")
+    if device_type != "cpu":
+        raise RuntimeError(f"vLLM selected {device_type!r}, not the CPU platform")
+    if torch.cuda.is_available():
+        raise RuntimeError("the CPU proof runner unexpectedly exposed CUDA")
+
+    native_dispatch = _load_cpu_native_kernels(torch, current_platform)
+
     from huggingface_hub import HfApi, snapshot_download
 
+    _event("model_revision_resolving", model=model_id, revision=revision)
     hub_started = time.perf_counter()
     info = HfApi().model_info(model_id, revision=revision, files_metadata=True)
     observed_revision = str(getattr(info, "sha", "") or "")
@@ -159,32 +274,16 @@ def execute(spec_path: Path, materialization_path: Path, output_path: Path) -> d
         raise RuntimeError("pinned model snapshot is missing model.safetensors")
     model_size, model_digest = _sha256_file(model_file)
     hub_elapsed = time.perf_counter() - hub_started
+    _event(
+        "model_snapshot_verified",
+        model=model_id,
+        revision=observed_revision,
+        license=observed_license,
+        model_file_sha256=model_digest,
+        model_file_size=model_size,
+    )
 
-    vllm_version = importlib.metadata.version("vllm")
-    torch_version = importlib.metadata.version("torch")
-    if vllm_version != str(spec["expected_vllm_version"]):
-        raise RuntimeError(
-            f"vLLM version mismatch: observed={vllm_version!r} expected={spec['expected_vllm_version']!r}"
-        )
-    if torch_version != str(spec["expected_torch_version"]):
-        raise RuntimeError(
-            f"PyTorch version mismatch: observed={torch_version!r} expected={spec['expected_torch_version']!r}"
-        )
-
-    native_module = importlib.import_module("vllm._C")
-    native_module_file = str(getattr(native_module, "__file__", "") or "")
-    if not native_module_file.endswith((".so", ".pyd")):
-        raise RuntimeError(f"vllm._C is not a native extension: {native_module_file!r}")
-
-    import torch
     from vllm import LLM, SamplingParams
-    from vllm.platforms import current_platform
-
-    device_type = str(getattr(current_platform, "device_type", "") or "")
-    if device_type != "cpu":
-        raise RuntimeError(f"vLLM selected {device_type!r}, not the CPU platform")
-    if torch.cuda.is_available():
-        raise RuntimeError("the CPU proof runner unexpectedly exposed CUDA")
 
     prompt = str(inference["prompt"])
     sampling = SamplingParams(
@@ -193,6 +292,13 @@ def execute(spec_path: Path, materialization_path: Path, output_path: Path) -> d
         seed=int(inference["seed"]),
     )
 
+    _event(
+        "engine_initializing",
+        model=str(snapshot_path),
+        dtype=str(inference["dtype"]),
+        max_model_len=int(inference["max_model_len"]),
+        native_variant=native_dispatch["selected_variant"],
+    )
     engine_started = time.perf_counter()
     llm = LLM(
         model=str(snapshot_path),
@@ -208,7 +314,9 @@ def execute(spec_path: Path, materialization_path: Path, output_path: Path) -> d
         device="cpu",
     )
     engine_ready_elapsed = time.perf_counter() - engine_started
+    _event("engine_initialized", elapsed_seconds=round(engine_ready_elapsed, 6))
 
+    _event("generation_started", requested_max_tokens=int(inference["max_tokens"]))
     generation_started = time.perf_counter()
     outputs = llm.generate([prompt], sampling, use_tqdm=False)
     generation_elapsed = time.perf_counter() - generation_started
@@ -218,6 +326,12 @@ def execute(spec_path: Path, materialization_path: Path, output_path: Path) -> d
     token_ids = [int(token) for token in completion.token_ids]
     if not token_ids:
         raise RuntimeError("vLLM executed but generated zero output tokens")
+    _event(
+        "generation_verified",
+        generated_token_count=len(token_ids),
+        generated_token_ids=token_ids,
+        elapsed_seconds=round(generation_elapsed, 6),
+    )
 
     proof: dict[str, Any] = {
         "schema": "a11oy.factory.runtime-execution/v1",
@@ -232,8 +346,8 @@ def execute(spec_path: Path, materialization_path: Path, output_path: Path) -> d
             "vllm": {
                 **{key: value for key, value in wheels["vllm"].items() if key != "path"},
                 "installed_version": vllm_version,
-                "native_extension": native_module_file,
                 "platform": device_type,
+                "native_dispatch": native_dispatch,
             },
             "torch": {
                 **{key: value for key, value in wheels["torch"].items() if key != "path"},

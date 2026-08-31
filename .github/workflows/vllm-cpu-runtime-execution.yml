@@ -233,12 +233,20 @@ jobs:
           printf 'TCMalloc: %s\nIntel OpenMP: %s\n' "$TC_PATH" "$IOMP_PATH" \
             | tee dist/runtime/preload-libraries.txt
 
+      - name: Capture execution host CPU capabilities
+        run: |
+          set -euo pipefail
+          lscpu | tee dist/runtime/lscpu.txt
+          grep -m1 -E '^(flags|Features)[[:space:]]*:' /proc/cpuinfo \
+            | tee dist/runtime/cpu-flags.txt
+
       - name: Execute pinned model through native vLLM CPU engine
         env:
           LD_PRELOAD: ${{ steps.runtime_libs.outputs.preload }}
           VLLM_TARGET_DEVICE: cpu
           VLLM_CPU_KVCACHE_SPACE: "1"
           VLLM_CPU_OMP_THREADS_BIND: nobind
+          VLLM_CPU_CI_ENV: "1"
           VLLM_WORKER_MULTIPROC_METHOD: spawn
           VLLM_NO_USAGE_STATS: "1"
           VLLM_LOGGING_LEVEL: INFO
@@ -249,6 +257,7 @@ jobs:
           TOKENIZERS_PARALLELISM: "false"
         run: |
           set -euo pipefail
+          ulimit -c 0
           timeout 35m python scripts/run_vllm_cpu_smoke.py \
             --spec factory/runtime/vllm-cpu-amd64-smoke.json \
             --materialization dist/runtime/materialization.json \
@@ -270,6 +279,10 @@ jobs:
           assert proof["runtime"]["vllm"]["installed_version"] == "0.28.0+cpu"
           assert proof["runtime"]["torch"]["installed_version"] == "2.13.0+cpu"
           assert proof["runtime"]["vllm"]["platform"] == "cpu"
+          dispatch = proof["runtime"]["vllm"]["native_dispatch"]
+          assert dispatch["dispatch"] == "vllm.current_platform.import_kernels"
+          assert dispatch["selected_variant"] in {"_C", "_C_AVX512", "_C_AVX2"}
+          assert "cpu_attn_has_isa" in dispatch["registered_ops"]
           assert proof["runtime"]["torch"]["cuda_available"] is False
           assert proof["model"]["revision"] == "12fd25f77366fa6b3b4b768ec3050bf629380bac"
           assert proof["model"]["license"].lower() == "apache-2.0"
@@ -279,7 +292,6 @@ jobs:
           assert proof["proof_sha256"]
           print(json.dumps(proof, indent=2, sort_keys=True))
           PY
-          lscpu > dist/runtime/lscpu.txt
 
       - name: Remove runtime and model bytes after proof capture
         if: always()
@@ -307,6 +319,7 @@ jobs:
             dist/runtime/pip-freeze.txt
             dist/runtime/preload-libraries.txt
             dist/runtime/lscpu.txt
+            dist/runtime/cpu-flags.txt
           if-no-files-found: error
           retention-days: 30
 

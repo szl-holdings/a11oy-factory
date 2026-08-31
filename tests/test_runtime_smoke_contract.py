@@ -16,6 +16,23 @@ runtime_smoke = importlib.util.module_from_spec(module_spec)
 module_spec.loader.exec_module(runtime_smoke)
 
 
+class FakeCpuFeatures:
+    def __init__(self, *, avx512: bool, avx512_bf16: bool):
+        self.avx512 = avx512
+        self.avx512_bf16 = avx512_bf16
+
+    def _is_avx512_supported(self):
+        return self.avx512
+
+    def _is_avx512_bf16_supported(self):
+        return self.avx512_bf16
+
+
+class FakeTorch:
+    def __init__(self, *, avx512: bool, avx512_bf16: bool):
+        self.cpu = FakeCpuFeatures(avx512=avx512, avx512_bf16=avx512_bf16)
+
+
 class RuntimeSmokeContractTests(unittest.TestCase):
     def test_checked_in_contract_is_fully_pinned_and_honest(self):
         contract = json.loads(SPEC.read_text(encoding="utf-8"))
@@ -114,6 +131,40 @@ class RuntimeSmokeContractTests(unittest.TestCase):
             materialization["artifacts"][0]["status"] = "DOWNLOADED_UNVERIFIED"
             with self.assertRaisesRegex(RuntimeError, "bytes were not verified"):
                 runtime_smoke._validate_contract(contract, materialization)
+
+    def test_x86_avx512_bf16_selects_full_extension(self):
+        selected = runtime_smoke._select_cpu_native_variant(
+            FakeTorch(avx512=True, avx512_bf16=True),
+            "x86_64",
+        )
+        self.assertEqual(selected, "_C")
+
+    def test_x86_avx512_without_bf16_selects_avx512_extension(self):
+        selected = runtime_smoke._select_cpu_native_variant(
+            FakeTorch(avx512=True, avx512_bf16=False),
+            "x86_64",
+        )
+        self.assertEqual(selected, "_C_AVX512")
+
+    def test_x86_without_avx512_selects_avx2_extension(self):
+        selected = runtime_smoke._select_cpu_native_variant(
+            FakeTorch(avx512=False, avx512_bf16=False),
+            "x86_64",
+        )
+        self.assertEqual(selected, "_C_AVX2")
+
+    def test_non_x86_uses_generic_extension(self):
+        selected = runtime_smoke._select_cpu_native_variant(
+            FakeTorch(avx512=False, avx512_bf16=False),
+            "aarch64",
+        )
+        self.assertEqual(selected, "_C")
+
+    def test_executor_never_forces_highest_isa_module(self):
+        source = SCRIPT.read_text(encoding="utf-8")
+        self.assertNotIn('importlib.import_module("vllm._C")', source)
+        self.assertIn("from vllm.kernels import vllm_c", source)
+        self.assertIn("current_platform.import_kernels", source)
 
 
 if __name__ == "__main__":
