@@ -1,0 +1,322 @@
+# Copyright 2026 SZL Holdings — SPDX-License-Identifier: Apache-2.0
+name: vllm-cpu-runtime-execution
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "factory/catalog.json"
+      - "factory/profiles/vllm-cpu-amd64.json"
+      - "factory/runtime/vllm-cpu-amd64-smoke.json"
+      - "a11oy_factory/distribution_materialize.py"
+      - "scripts/run_vllm_cpu_smoke.py"
+      - "tests/test_runtime_smoke_contract.py"
+      - ".github/workflows/vllm-cpu-runtime-execution.yml"
+  pull_request:
+    paths:
+      - "factory/catalog.json"
+      - "factory/profiles/vllm-cpu-amd64.json"
+      - "factory/runtime/vllm-cpu-amd64-smoke.json"
+      - "a11oy_factory/distribution_materialize.py"
+      - "scripts/run_vllm_cpu_smoke.py"
+      - "tests/test_runtime_smoke_contract.py"
+      - ".github/workflows/vllm-cpu-runtime-execution.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vllm-cpu-runtime-execution-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Validate pinned CPU runtime contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Run complete fail-closed tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Validate and resolve CPU distribution
+        run: |
+          set -euo pipefail
+          mkdir -p dist/runtime
+          python -m a11oy_factory distro validate \
+            --catalog factory/catalog.json \
+            --profile factory/profiles/vllm-cpu-amd64.json
+          python -m a11oy_factory distro resolve \
+            --catalog factory/catalog.json \
+            --profile factory/profiles/vllm-cpu-amd64.json \
+            --out dist/runtime/factory.lock.json \
+            > dist/runtime/resolve.json
+
+      - name: Enforce exact closure and runtime pins
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          lock = json.loads(Path("dist/runtime/factory.lock.json").read_text(encoding="utf-8"))
+          spec = json.loads(Path("factory/runtime/vllm-cpu-amd64-smoke.json").read_text(encoding="utf-8"))
+          ids = {component["id"] for component in lock["components"]}
+          assert ids == {"pytorch-cpu-amd64", "vllm-cpu-amd64"}, ids
+          assert spec["runtime_component"] == "vllm-cpu-amd64"
+          assert spec["torch_component"] == "pytorch-cpu-amd64"
+          assert spec["expected_vllm_version"] == "0.28.0+cpu"
+          assert spec["expected_torch_version"] == "2.13.0+cpu"
+          assert spec["model"]["revision"] == "12fd25f77366fa6b3b4b768ec3050bf629380bac"
+          assert spec["model"]["trust_remote_code"] is False
+          assert spec["assurance"]["production_runtime_certified"] is False
+          print(json.dumps({"ok": True, "closure": sorted(ids), "model": spec["model"]}, indent=2))
+          PY
+
+  execute:
+    name: Generate tokens with pinned vLLM CPU runtime
+    if: github.event_name != 'pull_request'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      HF_HOME: /tmp/a11oy-hf-cache
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install required CPU runtime libraries
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          if apt-cache show libtcmalloc-minimal4 >/dev/null 2>&1; then
+            TCMALLOC_PACKAGE=libtcmalloc-minimal4
+          elif apt-cache show libtcmalloc-minimal4t64 >/dev/null 2>&1; then
+            TCMALLOC_PACKAGE=libtcmalloc-minimal4t64
+          else
+            echo "No supported TCMalloc package is available" >&2
+            exit 1
+          fi
+          sudo apt-get install -y --no-install-recommends \
+            "$TCMALLOC_PACKAGE" \
+            libnuma1 \
+            numactl
+
+      - name: Compile distribution evidence bundle
+        run: |
+          set -euo pipefail
+          python -m a11oy_factory distro bundle \
+            --catalog factory/catalog.json \
+            --profile factory/profiles/vllm-cpu-amd64.json \
+            --out-dir dist/runtime
+
+      - name: Materialize exact PyTorch and vLLM wheels
+        run: |
+          set -euo pipefail
+          mkdir -p dist/runtime/artifacts
+          timeout 20m python -m a11oy_factory distro materialize \
+            --lock dist/runtime/factory.lock.json \
+            --component pytorch-cpu-amd64 \
+            --component vllm-cpu-amd64 \
+            --out-dir dist/runtime/artifacts \
+            --timeout 300 \
+            > dist/runtime/materialization.json
+          cat dist/runtime/materialization.json
+
+      - name: Export independently verified wheel paths
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          document = json.loads(Path("dist/runtime/materialization.json").read_text(encoding="utf-8"))
+          assert document["ok"] is True and document["decision"] == "ALLOW"
+          records = {item["component"]: item for item in document["artifacts"]}
+          required = {"pytorch-cpu-amd64", "vllm-cpu-amd64"}
+          assert set(records) == required, records
+          variables = {
+              "TORCH_WHEEL": records["pytorch-cpu-amd64"]["path"],
+              "VLLM_WHEEL": records["vllm-cpu-amd64"]["path"],
+          }
+          for component, record in records.items():
+              path = Path(record["path"])
+              payload = path.read_bytes()
+              assert len(payload) == record["size"]
+              assert hashlib.sha256(payload).hexdigest() == record["sha256"]
+              assert record["status"] in {"DOWNLOADED_VERIFIED", "REUSED_VERIFIED"}
+          with Path(os.environ["GITHUB_ENV"]).open("a", encoding="utf-8") as handle:
+              for key, value in variables.items():
+                  handle.write(f"{key}={value}\n")
+          print(json.dumps(variables, indent=2))
+          PY
+
+      - name: Install the verified CPU runtime
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install \
+            --no-cache-dir \
+            --report dist/runtime/pip-install-report.json \
+            "numpy<2.0" \
+            "$TORCH_WHEEL" \
+            "$VLLM_WHEEL" \
+            --extra-index-url https://download.pytorch.org/whl/cpu
+          python -m pip check
+          python -m pip freeze --all > dist/runtime/pip-freeze.txt
+          python - <<'PY'
+          import importlib.metadata
+          import json
+
+          observed = {
+              "torch": importlib.metadata.version("torch"),
+              "vllm": importlib.metadata.version("vllm"),
+          }
+          assert observed == {"torch": "2.13.0+cpu", "vllm": "0.28.0+cpu"}, observed
+          print(json.dumps(observed, indent=2))
+          PY
+
+      - name: Locate required TCMalloc and Intel OpenMP libraries
+        id: runtime_libs
+        run: |
+          set -euo pipefail
+          TC_PATH="$(ldconfig -p | awk '/libtcmalloc_minimal.so.4/{print $NF; exit}')"
+          IOMP_PATH="$(python - <<'PY'
+          import site
+          import sys
+          from pathlib import Path
+
+          roots = [Path(sys.prefix)]
+          roots.extend(Path(path) for path in site.getsitepackages())
+          seen = set()
+          for root in roots:
+              root = root.resolve()
+              if root in seen or not root.exists():
+                  continue
+              seen.add(root)
+              matches = sorted(root.rglob("libiomp5.so"))
+              if matches:
+                  print(matches[0])
+                  raise SystemExit(0)
+          raise SystemExit("libiomp5.so was not installed with the vLLM CPU runtime")
+          PY
+          )"
+          test -f "$TC_PATH"
+          test -f "$IOMP_PATH"
+          echo "tcmalloc=$TC_PATH" >> "$GITHUB_OUTPUT"
+          echo "iomp=$IOMP_PATH" >> "$GITHUB_OUTPUT"
+          echo "preload=$TC_PATH:$IOMP_PATH" >> "$GITHUB_OUTPUT"
+          printf 'TCMalloc: %s\nIntel OpenMP: %s\n' "$TC_PATH" "$IOMP_PATH" \
+            | tee dist/runtime/preload-libraries.txt
+
+      - name: Execute pinned model through native vLLM CPU engine
+        env:
+          LD_PRELOAD: ${{ steps.runtime_libs.outputs.preload }}
+          VLLM_TARGET_DEVICE: cpu
+          VLLM_CPU_KVCACHE_SPACE: "1"
+          VLLM_CPU_OMP_THREADS_BIND: nobind
+          VLLM_WORKER_MULTIPROC_METHOD: spawn
+          VLLM_NO_USAGE_STATS: "1"
+          VLLM_LOGGING_LEVEL: INFO
+          OMP_NUM_THREADS: "4"
+          MKL_NUM_THREADS: "4"
+          KMP_AFFINITY: disabled
+          KMP_BLOCKTIME: "0"
+          TOKENIZERS_PARALLELISM: "false"
+        run: |
+          set -euo pipefail
+          timeout 35m python scripts/run_vllm_cpu_smoke.py \
+            --spec factory/runtime/vllm-cpu-amd64-smoke.json \
+            --materialization dist/runtime/materialization.json \
+            --output dist/runtime/runtime-execution.json \
+            2>&1 | tee dist/runtime/runtime-execution.log
+
+      - name: Validate scoped execution proof
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          proof = json.loads(Path("dist/runtime/runtime-execution.json").read_text(encoding="utf-8"))
+          assert proof["schema"] == "a11oy.factory.runtime-execution/v1"
+          assert proof["ok"] is True and proof["decision"] == "ALLOW"
+          assert proof["runtime_execution_verified"] is True
+          assert proof["production_runtime_certified"] is False
+          assert proof["target"] == "linux-amd64-cpu"
+          assert proof["runtime"]["vllm"]["installed_version"] == "0.28.0+cpu"
+          assert proof["runtime"]["torch"]["installed_version"] == "2.13.0+cpu"
+          assert proof["runtime"]["vllm"]["platform"] == "cpu"
+          assert proof["runtime"]["torch"]["cuda_available"] is False
+          assert proof["model"]["revision"] == "12fd25f77366fa6b3b4b768ec3050bf629380bac"
+          assert proof["model"]["license"].lower() == "apache-2.0"
+          assert proof["model"]["model_file_sha256"]
+          assert proof["inference"]["generated_token_count"] >= 1
+          assert len(proof["inference"]["generated_token_ids"]) == proof["inference"]["generated_token_count"]
+          assert proof["proof_sha256"]
+          print(json.dumps(proof, indent=2, sort_keys=True))
+          PY
+          lscpu > dist/runtime/lscpu.txt
+
+      - name: Remove runtime and model bytes after proof capture
+        if: always()
+        run: |
+          rm -rf dist/runtime/artifacts
+          rm -rf "$HF_HOME"
+
+      - name: Upload scoped runtime-execution proof
+        if: success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: a11oy-vllm-cpu-runtime-execution
+          path: |
+            dist/runtime/factory.lock.json
+            dist/runtime/factory.plan.json
+            dist/runtime/factory.spdx.json
+            dist/runtime/factory.provenance.json
+            dist/runtime/factory.receipt.json
+            dist/runtime/factory.verification.json
+            dist/runtime/SHA256SUMS
+            dist/runtime/materialization.json
+            dist/runtime/runtime-execution.json
+            dist/runtime/runtime-execution.log
+            dist/runtime/pip-install-report.json
+            dist/runtime/pip-freeze.txt
+            dist/runtime/preload-libraries.txt
+            dist/runtime/lscpu.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  complete:
+    name: CPU runtime execution gate
+    if: always() && github.event_name != 'pull_request'
+    needs: [contract, execute]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require verified token generation
+        env:
+          CONTRACT_RESULT: ${{ needs.contract.result }}
+          EXECUTE_RESULT: ${{ needs.execute.result }}
+        run: |
+          test "$CONTRACT_RESULT" = "success"
+          test "$EXECUTE_RESULT" = "success"
+          echo "Pinned PyTorch CPU and native vLLM CPU wheels loaded a pinned model revision and generated tokens successfully."

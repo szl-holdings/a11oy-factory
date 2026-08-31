@@ -5,7 +5,7 @@
         "network": false,
         "steps": []
       },
-      "description": "PyTorch 2.13.0 source distribution required by the vLLM 0.28.0 build metadata.",
+      "description": "PyTorch 2.13.0 source distribution required by non-CPU runtime build metadata.",
       "evidence": [
         {
           "type": "release-asset-digest",
@@ -48,6 +48,49 @@
         "network": false,
         "steps": []
       },
+      "description": "Official PyTorch 2.13.0 CPU wheel for CPython 3.12 on Linux AMD64.",
+      "evidence": [
+        {
+          "type": "release-asset-digest",
+          "uri": "https://download.pytorch.org/whl/cpu/torch/"
+        },
+        {
+          "type": "license-declaration",
+          "uri": "https://github.com/pytorch/pytorch/blob/v2.13.0/LICENSE"
+        },
+        {
+          "type": "compatibility-declaration",
+          "uri": "https://download.pytorch.org/whl/cpu/torch/"
+        }
+      ],
+      "id": "pytorch-cpu-amd64",
+      "kind": "python-wheel",
+      "license": "BSD-3-Clause",
+      "requires": [],
+      "source": {
+        "digest": "sha256:4ca4a9394b0c771238a4f73590fdbbc4debad85ed0fa63d026ae1b085da7d6e2",
+        "filename": "torch-2.13.0+cpu-cp312-cp312-manylinux_2_28_x86_64.whl",
+        "size": 191817609,
+        "type": "artifact",
+        "uri": "https://download-r2.pytorch.org/whl/cpu/torch-2.13.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl"
+      },
+      "supplier": "PyTorch Foundation",
+      "targets": [
+        "linux-amd64-cpu"
+      ],
+      "version": "2.13.0+cpu",
+      "vulnerability": {
+        "note": "Official CPU wheel is digest pinned; no current vulnerability scan is bundled.",
+        "observed_at": null,
+        "scanner": null,
+        "status": "UNVERIFIED"
+      }
+    },
+    {
+      "build": {
+        "network": false,
+        "steps": []
+      },
       "description": "vLLM 0.28.0 release wheel for linux-amd64-cpu.",
       "evidence": [
         {
@@ -67,7 +110,7 @@
       "kind": "python-wheel",
       "license": "Apache-2.0",
       "requires": [
-        "pytorch-source"
+        "pytorch-cpu-amd64"
       ],
       "source": {
         "digest": "sha256:71f69f1549ba5832595db2e85a485d067ba13b62c60055340128fbda0842bb97",
@@ -277,6 +320,8 @@
       "BSD-3-Clause"
     ],
     "allowed_source_hosts": [
+      "download.pytorch.org",
+      "download-r2.pytorch.org",
       "github.com",
       "release-assets.githubusercontent.com",
       "objects.githubusercontent.com",
@@ -304,7 +349,7 @@
     "captured_at": "2026-08-31T00:00:00Z",
     "honesty": "RELEASE-METADATA",
     "runtime_certified": false,
-    "source": "upstream GitHub release metadata"
+    "source": "upstream release metadata"
   },
   "targets": {
     "linux-amd64-cpu": {

@@ -1,0 +1,48 @@
+{
+  "schema": "a11oy.factory.runtime-smoke/v1",
+  "id": "vllm-cpu-amd64-smollm2",
+  "target": "linux-amd64-cpu",
+  "distribution_profile": "vllm-cpu-amd64",
+  "runtime_component": "vllm-cpu-amd64",
+  "torch_component": "pytorch-cpu-amd64",
+  "expected_vllm_version": "0.28.0+cpu",
+  "expected_torch_version": "2.13.0+cpu",
+  "model": {
+    "id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "revision": "12fd25f77366fa6b3b4b768ec3050bf629380bac",
+    "license": "Apache-2.0",
+    "trust_remote_code": false,
+    "allow_patterns": [
+      "config.json",
+      "generation_config.json",
+      "merges.txt",
+      "model.safetensors",
+      "special_tokens_map.json",
+      "tokenizer.json",
+      "tokenizer_config.json",
+      "vocab.json"
+    ]
+  },
+  "inference": {
+    "prompt": "A trustworthy AI factory proves execution by producing this continuation:",
+    "max_model_len": 128,
+    "max_tokens": 8,
+    "temperature": 0.0,
+    "dtype": "float32",
+    "seed": 0,
+    "kv_cache_gib": 1,
+    "omp_threads": 4
+  },
+  "assurance": {
+    "required": [
+      "PINNED_TORCH_WHEEL",
+      "PINNED_RUNTIME_WHEEL",
+      "NATIVE_EXTENSION_IMPORT",
+      "PINNED_MODEL_REVISION",
+      "MODEL_FILE_SHA256",
+      "CPU_TOKEN_GENERATION"
+    ],
+    "production_runtime_certified": false,
+    "scope": "single-process CPU AMD64 smoke execution"
+  }
+}
