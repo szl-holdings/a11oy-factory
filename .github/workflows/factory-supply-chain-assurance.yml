@@ -1,0 +1,302 @@
+# Copyright 2026 SZL Holdings — SPDX-License-Identifier: Apache-2.0
+name: factory-supply-chain-assurance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "a11oy_factory/assurance.py"
+      - "factory/catalog.json"
+      - "factory/profiles/vllm-cpu-amd64.json"
+      - "factory/policy/**"
+      - "scripts/scan_python_environment.py"
+      - "scripts/evaluate_factory_assurance.py"
+      - "tests/test_assurance.py"
+      - ".github/workflows/factory-supply-chain-assurance.yml"
+  pull_request:
+    paths:
+      - "a11oy_factory/assurance.py"
+      - "factory/catalog.json"
+      - "factory/profiles/vllm-cpu-amd64.json"
+      - "factory/policy/**"
+      - "scripts/scan_python_environment.py"
+      - "scripts/evaluate_factory_assurance.py"
+      - "tests/test_assurance.py"
+      - ".github/workflows/factory-supply-chain-assurance.yml"
+  schedule:
+    - cron: "23 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: factory-supply-chain-assurance-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  HF_HUB_DISABLE_TELEMETRY: "1"
+
+jobs:
+  contract:
+    name: Validate assurance contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Compile assurance executors
+        run: |
+          python -m py_compile \
+            a11oy_factory/assurance.py \
+            scripts/scan_python_environment.py \
+            scripts/evaluate_factory_assurance.py
+
+      - name: Run fail-closed test suite
+        run: python -m unittest discover -s tests -v
+
+      - name: Validate channel policies
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from a11oy_factory.assurance import validate_policy
+
+          decisions = {}
+          for path in sorted(Path("factory/policy").glob("assurance-*.json")):
+              policy = json.loads(path.read_text(encoding="utf-8"))
+              validate_policy(policy)
+              decisions[policy["channel"]] = policy["id"]
+          assert decisions == {"candidate": "candidate-v1", "stable": "stable-v1"}, decisions
+          print(json.dumps({"ok": True, "policies": decisions}, indent=2, sort_keys=True))
+          PY
+
+  observe:
+    name: Observe exact runtime supply chain
+    if: github.event_name != 'pull_request'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Compile exact CPU distribution bundle
+        run: |
+          set -euo pipefail
+          mkdir -p dist/assurance
+          python -m a11oy_factory distro bundle \
+            --catalog factory/catalog.json \
+            --profile factory/profiles/vllm-cpu-amd64.json \
+            --out-dir dist/assurance/distribution
+
+      - name: Materialize exact runtime wheels
+        run: |
+          set -euo pipefail
+          timeout 20m python -m a11oy_factory distro materialize \
+            --lock dist/assurance/distribution/factory.lock.json \
+            --component pytorch-cpu-amd64 \
+            --component vllm-cpu-amd64 \
+            --out-dir dist/assurance/wheels \
+            --timeout 300 \
+            > dist/assurance/materialization.json
+          python - <<'PY' >> "$GITHUB_ENV"
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path("dist/assurance/materialization.json").read_text(encoding="utf-8"))
+          records = {record["component"]: record for record in payload["artifacts"]}
+          expected = {"pytorch-cpu-amd64", "vllm-cpu-amd64"}
+          assert set(records) == expected, records
+          for record in records.values():
+              assert record["status"] in {"DOWNLOADED_VERIFIED", "REUSED_VERIFIED"}
+              assert Path(record["path"]).is_file()
+          print(f"TORCH_WHEEL={records['pytorch-cpu-amd64']['path']}")
+          print(f"VLLM_WHEEL={records['vllm-cpu-amd64']['path']}")
+          PY
+
+      - name: Resolve and install isolated Python runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv "${RUNNER_TEMP}/factory-assurance-venv"
+          VENV_PYTHON="${RUNNER_TEMP}/factory-assurance-venv/bin/python"
+          echo "VENV_PYTHON=$VENV_PYTHON" >> "$GITHUB_ENV"
+          printf '%s\n' 'torch==2.13.0+cpu' > dist/assurance/constraints.txt
+          "$VENV_PYTHON" -m pip install --no-cache-dir \
+            --report dist/assurance/pip-install-report.json \
+            --constraint dist/assurance/constraints.txt \
+            --extra-index-url https://download.pytorch.org/whl/cpu \
+            "$TORCH_WHEEL" "$VLLM_WHEEL"
+          "$VENV_PYTHON" -m pip check
+          "$VENV_PYTHON" - <<'PY'
+          import importlib.metadata
+          assert importlib.metadata.version("torch") == "2.13.0+cpu"
+          assert importlib.metadata.version("vllm").split("+", 1)[0] == "0.28.0"
+          print({
+              "torch": importlib.metadata.version("torch"),
+              "vllm": importlib.metadata.version("vllm"),
+          })
+          PY
+
+      - name: Query current OSV and extract license evidence
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          timeout 12m "$VENV_PYTHON" scripts/scan_python_environment.py \
+            --pip-report dist/assurance/pip-install-report.json \
+            --output dist/assurance/python-environment-scan.json \
+            --exclude pip \
+            --exclude setuptools \
+            --exclude wheel \
+            --timeout 45 \
+            --retries 4
+
+      - name: Retrieve latest successful runtime-execution proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_ID="$(gh api --method GET \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/vllm-cpu-runtime-execution.yml/runs?branch=main&status=success&per_page=20" \
+            --jq '[.workflow_runs[] | select(.event == "push" or .event == "workflow_dispatch")][0].id')"
+          test -n "$RUN_ID" && test "$RUN_ID" != "null"
+          echo "RUNTIME_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+          mkdir -p dist/assurance/runtime
+          gh run download "$RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name a11oy-vllm-cpu-amd64-runtime-proof \
+            --dir dist/assurance/runtime
+          RUNTIME_PROOF="$(find dist/assurance/runtime -type f -name runtime-proof.json -print -quit)"
+          test -n "$RUNTIME_PROOF"
+          echo "RUNTIME_PROOF=$RUNTIME_PROOF" >> "$GITHUB_ENV"
+          echo "$RUN_ID" > dist/assurance/runtime-workflow-run-id.txt
+
+      - name: Evaluate candidate and stable channels
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          "$VENV_PYTHON" scripts/evaluate_factory_assurance.py \
+            --scan dist/assurance/python-environment-scan.json \
+            --runtime-proof "$RUNTIME_PROOF" \
+            --policy factory/policy/assurance-candidate.json \
+            --policy factory/policy/assurance-stable.json \
+            --out-dir dist/assurance/verdicts
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from a11oy_factory.assurance import verify_verdict
+
+          scan = json.loads(Path("dist/assurance/python-environment-scan.json").read_text())
+          candidate = json.loads(Path("dist/assurance/verdicts/candidate-verdict.json").read_text())
+          stable = json.loads(Path("dist/assurance/verdicts/stable-verdict.json").read_text())
+          assert scan["osv"]["complete"] is True
+          assert verify_verdict(candidate)
+          assert verify_verdict(stable)
+          assert stable["decision"] == "BLOCKED"
+          assert any(issue["code"] == "CRYPTOGRAPHIC_SIGNATURE_REQUIRED" for issue in stable["issues"])
+          print(json.dumps({
+              "packages": scan["counts"]["packages"],
+              "vulnerabilities": scan["counts"]["vulnerabilities"],
+              "severities": scan["counts"]["severities"],
+              "candidate": candidate["decision"],
+              "candidate_issues": candidate["counts"]["issues"],
+              "stable": stable["decision"],
+              "stable_issues": stable["counts"]["issues"],
+              "runtime_run_id": Path("dist/assurance/runtime-workflow-run-id.txt").read_text().strip(),
+          }, indent=2, sort_keys=True))
+          PY
+
+      - name: Publish assurance summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f dist/assurance/verdicts/assurance-summary.json ]; then
+            python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          scan = json.loads(Path("dist/assurance/python-environment-scan.json").read_text())
+          summary = json.loads(Path("dist/assurance/verdicts/assurance-summary.json").read_text())
+          print("## A11oy Factory supply-chain assurance\n")
+          print(f"- Packages queried against OSV: `{scan['counts']['packages']}`")
+          print(f"- Active vulnerability matches: `{scan['counts']['vulnerabilities']}`")
+          print(f"- Severity counts: `{json.dumps(scan['counts']['severities'], sort_keys=True)}`")
+          for channel, verdict in summary["channels"].items():
+              print(f"- {channel.title()} channel: `{verdict['decision']}` ({verdict['issues']} issue(s))")
+          print(f"- Runtime execution verified: `{summary['runtime_execution_verified']}`")
+          print(f"- Production runtime certified: `{summary['production_runtime_certified']}`")
+          print("\nA blocked channel is a valid fail-closed result; workflow success means the evidence pipeline executed and retained its proof.")
+          PY
+          fi
+
+      - name: Purge executable bytes and isolated environment
+        if: always()
+        shell: bash
+        run: |
+          rm -rf dist/assurance/wheels
+          rm -rf "${RUNNER_TEMP}/factory-assurance-venv"
+          find dist/assurance/runtime -type f ! -name runtime-proof.json -delete 2>/dev/null || true
+
+      - name: Upload assurance evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: a11oy-factory-supply-chain-assurance
+          path: |
+            dist/assurance/python-environment-scan.json
+            dist/assurance/pip-install-report.json
+            dist/assurance/materialization.json
+            dist/assurance/constraints.txt
+            dist/assurance/runtime-workflow-run-id.txt
+            dist/assurance/runtime/runtime-proof.json
+            dist/assurance/verdicts/*.json
+            dist/assurance/distribution/factory.lock.json
+            dist/assurance/distribution/factory.spdx.json
+            dist/assurance/distribution/factory.provenance.json
+            dist/assurance/distribution/factory.verification.json
+            dist/assurance/distribution/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
+
+  gate:
+    name: Supply-chain assurance gate
+    if: always()
+    needs: [contract, observe]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require complete evidence execution
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          CONTRACT_RESULT: ${{ needs.contract.result }}
+          OBSERVE_RESULT: ${{ needs.observe.result }}
+        run: |
+          set -euo pipefail
+          test "$CONTRACT_RESULT" = "success"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            test "$OBSERVE_RESULT" = "skipped"
+            echo "Assurance contracts passed; networked observation is reserved for main, schedule, or explicit dispatch."
+          else
+            test "$OBSERVE_RESULT" = "success"
+            echo "OSV, license, download-hash, runtime-proof, and channel verdict evidence completed."
+          fi
