@@ -27,11 +27,23 @@ EXPECTED_PROFILE_IDS = {
 TERMINAL_FAILURE_STAGES = {
     "BUILD_ERROR",
     "CONFIG_ERROR",
+    "NO_APP_FILE",
     "RUNTIME_ERROR",
     "DELETING",
     "PAUSED",
     "STOPPED",
 }
+ENDPOINT_STAGES = {"RUNNING", "SLEEPING"}
+
+
+class TerminalSpaceError(RuntimeError):
+    """The Hub reports a settled state in which this deployment cannot serve."""
+
+
+def _scalar(value: Any) -> str | None:
+    if value is None:
+        return None
+    return str(getattr(value, "value", value))
 
 
 def _as_url(info: Any) -> str:
@@ -107,9 +119,9 @@ def _assert_contract(health: dict[str, Any], distribution: dict[str, Any]) -> No
 
 def _runtime_payload(runtime: Any) -> dict[str, Any]:
     return {
-        "stage": str(getattr(runtime, "stage", "UNKNOWN")),
-        "hardware": getattr(runtime, "hardware", None),
-        "requested_hardware": getattr(runtime, "requested_hardware", None),
+        "stage": _scalar(getattr(runtime, "stage", "UNKNOWN")) or "UNKNOWN",
+        "hardware": _scalar(getattr(runtime, "hardware", None)),
+        "requested_hardware": _scalar(getattr(runtime, "requested_hardware", None)),
         "sleep_time": getattr(runtime, "sleep_time", None),
     }
 
@@ -134,6 +146,16 @@ def _write_evidence(payload: dict[str, Any]) -> Path:
     return output
 
 
+def _failure_payload(error: str, observation: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "ok": False,
+        "decision": "BLOCKED",
+        "repo_id": REPO_ID,
+        "error": error,
+        "last_observation": observation,
+    }
+
+
 def main() -> int:
     token = os.environ.get("HF_TOKEN") or os.environ.get("HF_ORG_TOKEN")
     if not token:
@@ -142,9 +164,14 @@ def main() -> int:
 
     timeout_seconds = int(os.environ.get("HF_VERIFY_TIMEOUT", "900"))
     poll_seconds = max(2, int(os.environ.get("HF_VERIFY_POLL", "8")))
+    initial_delay = max(0, int(os.environ.get("HF_VERIFY_INITIAL_DELAY", "12")))
     deadline = time.monotonic() + timeout_seconds
     api = HfApi(token=token)
     last_observation: dict[str, Any] = {}
+
+    if initial_delay:
+        print(f"allowing {initial_delay}s for the new Space build to enter its deployment stage", flush=True)
+        time.sleep(initial_delay)
 
     while time.monotonic() < deadline:
         try:
@@ -155,7 +182,7 @@ def main() -> int:
             last_observation = {
                 "runtime": runtime_data,
                 "host": host,
-                "space_sha": getattr(info, "sha", None),
+                "space_sha": _scalar(getattr(info, "sha", None)),
             }
             stage = runtime_data["stage"]
             print(
@@ -163,8 +190,8 @@ def main() -> int:
                 flush=True,
             )
             if stage in TERMINAL_FAILURE_STAGES:
-                raise RuntimeError(f"Space reached terminal failure stage {stage}.")
-            if stage == "RUNNING":
+                raise TerminalSpaceError(f"Space reached terminal failure stage {stage}.")
+            if stage in ENDPOINT_STAGES:
                 try:
                     health = _get_json(host, "/healthz")
                     distribution = _get_json(host, "/api/distribution")
@@ -175,7 +202,7 @@ def main() -> int:
                         "checked_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                         "repo_id": REPO_ID,
                         "host": host,
-                        "space_sha": getattr(info, "sha", None),
+                        "space_sha": _scalar(getattr(info, "sha", None)),
                         "runtime": runtime_data,
                         "health": {
                             "ok": health["ok"],
@@ -202,26 +229,20 @@ def main() -> int:
                 except (OSError, ValueError, RuntimeError, urllib.error.URLError) as exc:
                     last_observation["endpoint_error"] = str(exc)
                     print(f"runtime endpoint not ready: {exc}", flush=True)
-        except RuntimeError:
-            raise
+        except TerminalSpaceError as exc:
+            last_observation["terminal_error"] = str(exc)
+            print(json.dumps(_failure_payload(str(exc), last_observation), indent=2, sort_keys=True), file=sys.stderr)
+            return 1
         except Exception as exc:  # Hub may transiently return 5xx during deployment.
             last_observation["hub_error"] = f"{type(exc).__name__}: {exc}"
             print(f"Hub runtime observation failed transiently: {exc}", flush=True)
         time.sleep(poll_seconds)
 
-    print(
-        json.dumps(
-            {
-                "ok": False,
-                "decision": "BLOCKED",
-                "error": "Timed out waiting for the deployed Space contract.",
-                "last_observation": last_observation,
-            },
-            indent=2,
-            sort_keys=True,
-        ),
-        file=sys.stderr,
+    payload = _failure_payload(
+        "Timed out waiting for the deployed Space contract.",
+        last_observation,
     )
+    print(json.dumps(payload, indent=2, sort_keys=True), file=sys.stderr)
     return 1
 
 
