@@ -1,0 +1,12 @@
+{
+  "assurance": "INTEGRITY_LOCKED",
+  "channel": "candidate",
+  "id": "vllm-cuda129-arm64",
+  "policy": {},
+  "roots": [
+    "vllm-cuda129-arm64"
+  ],
+  "schema": "a11oy.factory.profile/v1",
+  "source_date_epoch": 1787737590,
+  "target": "linux-arm64-cuda129"
+}
