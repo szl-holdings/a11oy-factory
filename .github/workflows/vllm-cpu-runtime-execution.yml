@@ -178,7 +178,7 @@ jobs:
           python -m pip install \
             --no-cache-dir \
             --report dist/runtime/pip-install-report.json \
-            "numpy<2.0" \
+            "numpy>=2,<2.5" \
             "$TORCH_WHEEL" \
             "$VLLM_WHEEL" \
             --extra-index-url https://download.pytorch.org/whl/cpu
@@ -189,10 +189,14 @@ jobs:
           import json
 
           observed = {
+              "numpy": importlib.metadata.version("numpy"),
               "torch": importlib.metadata.version("torch"),
               "vllm": importlib.metadata.version("vllm"),
           }
-          assert observed == {"torch": "2.13.0+cpu", "vllm": "0.28.0+cpu"}, observed
+          assert observed["torch"] == "2.13.0+cpu", observed
+          assert observed["vllm"] == "0.28.0+cpu", observed
+          numpy_major = int(observed["numpy"].split(".", 1)[0])
+          assert numpy_major == 2, observed
           print(json.dumps(observed, indent=2))
           PY
 
