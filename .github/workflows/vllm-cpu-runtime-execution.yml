@@ -197,7 +197,7 @@ jobs:
           PY
 
       - name: Locate required TCMalloc and Intel OpenMP libraries
-        id: runtime-libs
+        id: runtime_libs
         run: |
           set -euo pipefail
           TC_PATH="$(ldconfig -p | awk '/libtcmalloc_minimal.so.4/{print $NF; exit}')"
@@ -231,7 +231,7 @@ jobs:
 
       - name: Execute pinned model through native vLLM CPU engine
         env:
-          LD_PRELOAD: ${{ steps.runtime-libs.outputs.preload }}
+          LD_PRELOAD: ${{ steps.runtime_libs.outputs.preload }}
           VLLM_TARGET_DEVICE: cpu
           VLLM_CPU_KVCACHE_SPACE: "1"
           VLLM_CPU_OMP_THREADS_BIND: nobind
