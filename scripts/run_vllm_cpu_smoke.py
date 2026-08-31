@@ -10,7 +10,6 @@ import importlib.metadata
 import json
 import os
 import platform
-import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -48,10 +47,6 @@ def _canonical_digest(value: Any) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
-def _base_version(value: str) -> str:
-    return value.split("+", 1)[0]
-
-
 def _model_license(info: Any) -> str | None:
     card_data = getattr(info, "card_data", None)
     if card_data is None:
@@ -63,29 +58,17 @@ def _model_license(info: Any) -> str | None:
     return str(value) if value else None
 
 
-def _validate_contract(spec: dict[str, Any], materialization: dict[str, Any]) -> dict[str, Any]:
-    if spec.get("schema") != "a11oy.factory.runtime-smoke/v1":
-        raise RuntimeError("unsupported runtime smoke schema")
-    if spec.get("target") != "linux-amd64-cpu":
-        raise RuntimeError("this executor only certifies the linux-amd64-cpu smoke target")
-
-    component_id = str(spec.get("runtime_component") or "")
-    records = materialization.get("artifacts")
-    if materialization.get("ok") is not True or materialization.get("decision") != "ALLOW":
-        raise RuntimeError("runtime wheel materialization was not ALLOW")
-    if not isinstance(records, list) or len(records) != 1:
-        raise RuntimeError("runtime smoke requires exactly one materialized wheel")
-    record = records[0]
-    if not isinstance(record, dict) or record.get("component") != component_id:
-        raise RuntimeError("materialized component does not match runtime contract")
+def _verified_record(record: dict[str, Any], component_id: str) -> dict[str, Any]:
+    if record.get("component") != component_id:
+        raise RuntimeError(f"materialized component does not match {component_id!r}")
     if record.get("status") not in {"DOWNLOADED_VERIFIED", "REUSED_VERIFIED"}:
-        raise RuntimeError("runtime wheel bytes were not verified")
+        raise RuntimeError(f"component {component_id!r} bytes were not verified")
     wheel_path = Path(str(record.get("path") or ""))
     if not wheel_path.is_file():
-        raise RuntimeError(f"verified runtime wheel is missing: {wheel_path}")
+        raise RuntimeError(f"verified wheel is missing: {wheel_path}")
     wheel_size, wheel_digest = _sha256_file(wheel_path)
     if wheel_size != int(record.get("size", -1)) or wheel_digest != record.get("sha256"):
-        raise RuntimeError("runtime wheel changed after materialization")
+        raise RuntimeError(f"component {component_id!r} changed after materialization")
     return {
         "component": component_id,
         "path": str(wheel_path),
@@ -93,6 +76,39 @@ def _validate_contract(spec: dict[str, Any], materialization: dict[str, Any]) ->
         "sha256": wheel_digest,
         "origin_host": record.get("origin_host"),
         "final_host": record.get("final_host"),
+    }
+
+
+def _validate_contract(spec: dict[str, Any], materialization: dict[str, Any]) -> dict[str, Any]:
+    if spec.get("schema") != "a11oy.factory.runtime-smoke/v1":
+        raise RuntimeError("unsupported runtime smoke schema")
+    if spec.get("target") != "linux-amd64-cpu":
+        raise RuntimeError("this executor only verifies the linux-amd64-cpu smoke target")
+    if materialization.get("ok") is not True or materialization.get("decision") != "ALLOW":
+        raise RuntimeError("runtime wheel materialization was not ALLOW")
+
+    runtime_component = str(spec.get("runtime_component") or "")
+    torch_component = str(spec.get("torch_component") or "")
+    required = {runtime_component, torch_component}
+    if "" in required or len(required) != 2:
+        raise RuntimeError("runtime contract must name distinct vLLM and PyTorch components")
+
+    records = materialization.get("artifacts")
+    if not isinstance(records, list):
+        raise RuntimeError("runtime materialization is missing artifact records")
+    by_component = {
+        str(record.get("component")): record
+        for record in records
+        if isinstance(record, dict) and record.get("component")
+    }
+    if set(by_component) != required:
+        raise RuntimeError(
+            f"runtime smoke requires exactly {sorted(required)!r}; observed {sorted(by_component)!r}"
+        )
+
+    return {
+        "vllm": _verified_record(by_component[runtime_component], runtime_component),
+        "torch": _verified_record(by_component[torch_component], torch_component),
         "materialization_receipt_hash": materialization.get("receipt_hash"),
         "lock_digest": materialization.get("lock_digest"),
     }
@@ -101,7 +117,7 @@ def _validate_contract(spec: dict[str, Any], materialization: dict[str, Any]) ->
 def execute(spec_path: Path, materialization_path: Path, output_path: Path) -> dict[str, Any]:
     spec = _read_json(spec_path)
     materialization = _read_json(materialization_path)
-    wheel = _validate_contract(spec, materialization)
+    wheels = _validate_contract(spec, materialization)
 
     inference = spec["inference"]
     model_contract = spec["model"]
@@ -146,11 +162,11 @@ def execute(spec_path: Path, materialization_path: Path, output_path: Path) -> d
 
     vllm_version = importlib.metadata.version("vllm")
     torch_version = importlib.metadata.version("torch")
-    if _base_version(vllm_version) != str(spec["expected_vllm_version"]):
+    if vllm_version != str(spec["expected_vllm_version"]):
         raise RuntimeError(
             f"vLLM version mismatch: observed={vllm_version!r} expected={spec['expected_vllm_version']!r}"
         )
-    if _base_version(torch_version) != str(spec["expected_torch_version"]):
+    if torch_version != str(spec["expected_torch_version"]):
         raise RuntimeError(
             f"PyTorch version mismatch: observed={torch_version!r} expected={spec['expected_torch_version']!r}"
         )
@@ -167,6 +183,8 @@ def execute(spec_path: Path, materialization_path: Path, output_path: Path) -> d
     device_type = str(getattr(current_platform, "device_type", "") or "")
     if device_type != "cpu":
         raise RuntimeError(f"vLLM selected {device_type!r}, not the CPU platform")
+    if torch.cuda.is_available():
+        raise RuntimeError("the CPU proof runner unexpectedly exposed CUDA")
 
     prompt = str(inference["prompt"])
     sampling = SamplingParams(
@@ -211,17 +229,19 @@ def execute(spec_path: Path, materialization_path: Path, output_path: Path) -> d
         "runtime_execution_verified": True,
         "production_runtime_certified": False,
         "runtime": {
-            "component": wheel["component"],
-            "vllm_version": vllm_version,
-            "torch_version": torch_version,
-            "vllm_platform": device_type,
-            "native_extension": native_module_file,
-            "wheel_sha256": wheel["sha256"],
-            "wheel_size": wheel["size"],
-            "origin_host": wheel["origin_host"],
-            "final_host": wheel["final_host"],
-            "materialization_receipt_hash": wheel["materialization_receipt_hash"],
-            "lock_digest": wheel["lock_digest"],
+            "vllm": {
+                **{key: value for key, value in wheels["vllm"].items() if key != "path"},
+                "installed_version": vllm_version,
+                "native_extension": native_module_file,
+                "platform": device_type,
+            },
+            "torch": {
+                **{key: value for key, value in wheels["torch"].items() if key != "path"},
+                "installed_version": torch_version,
+                "cuda_available": torch.cuda.is_available(),
+            },
+            "materialization_receipt_hash": wheels["materialization_receipt_hash"],
+            "lock_digest": wheels["lock_digest"],
         },
         "model": {
             "id": model_id,
@@ -265,8 +285,9 @@ def execute(spec_path: Path, materialization_path: Path, output_path: Path) -> d
             "satisfied": list(spec["assurance"]["required"]),
             "signing": "UNSIGNED-honest",
             "note": (
-                "This proves one pinned model generated tokens through the pinned native vLLM CPU wheel "
-                "on one GitHub-hosted AMD64 runner. It is not accelerator-wide or production certification."
+                "This proves one immutable PyTorch CPU wheel and one immutable native vLLM CPU wheel "
+                "loaded one pinned Apache-2.0 model revision and generated tokens on one Linux AMD64 "
+                "GitHub-hosted CPU runner. It is not accelerator-wide or production certification."
             ),
         },
     }
