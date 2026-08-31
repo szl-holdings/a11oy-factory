@@ -1,0 +1,340 @@
+# Copyright 2026 SZL Holdings — SPDX-License-Identifier: Apache-2.0
+name: factory-keyless-signing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "a11oy_factory/signed_promotion.py"
+      - "scripts/build_assurance_signing_subject.py"
+      - "scripts/emit_sigstore_proof.py"
+      - "scripts/finalize_signed_promotion.py"
+      - "tests/test_signed_promotion.py"
+      - "tests/test_keyless_signing_workflow_contract.py"
+      - "factory/signing/**"
+      - ".github/workflows/factory-keyless-signing.yml"
+  pull_request:
+    paths:
+      - "a11oy_factory/signed_promotion.py"
+      - "scripts/build_assurance_signing_subject.py"
+      - "scripts/emit_sigstore_proof.py"
+      - "scripts/finalize_signed_promotion.py"
+      - "tests/test_signed_promotion.py"
+      - "tests/test_keyless_signing_workflow_contract.py"
+      - "factory/signing/**"
+      - ".github/workflows/factory-keyless-signing.yml"
+  workflow_run:
+    workflows: ["factory-supply-chain-assurance"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+concurrency:
+  group: factory-keyless-signing-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  COSIGN_VERSION: "v2.4.1"
+  SIGSTORE_OIDC_ISSUER: "https://token.actions.githubusercontent.com"
+  SIGSTORE_CERTIFICATE_IDENTITY: "https://github.com/szl-holdings/a11oy-factory/.github/workflows/factory-keyless-signing.yml@refs/heads/main"
+
+jobs:
+  contract:
+    name: Validate signing and promotion contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Compile signing executors
+        run: |
+          python -m py_compile \
+            a11oy_factory/signed_promotion.py \
+            scripts/build_assurance_signing_subject.py \
+            scripts/emit_sigstore_proof.py \
+            scripts/finalize_signed_promotion.py
+
+      - name: Run fail-closed tests
+        run: python -m unittest discover -s tests -v
+
+  sign:
+    name: Sign and verify assurance subject
+    if: >-
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout immutable main implementation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: main
+          fetch-depth: 1
+
+      - name: Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Resolve successful assurance evidence run
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            ASSURANCE_RUN_ID="$TRIGGER_RUN_ID"
+          else
+            ASSURANCE_RUN_ID="$(gh api --method GET \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/factory-supply-chain-assurance.yml/runs?branch=main&status=success&per_page=20" \
+              --jq '[.workflow_runs[] | select(.event == "push" or .event == "schedule" or .event == "workflow_dispatch")][0].id')"
+          fi
+          test -n "$ASSURANCE_RUN_ID" && test "$ASSURANCE_RUN_ID" != "null"
+          RUN_CONCLUSION="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${ASSURANCE_RUN_ID}" --jq .conclusion)"
+          RUN_HEAD_BRANCH="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${ASSURANCE_RUN_ID}" --jq .head_branch)"
+          test "$RUN_CONCLUSION" = "success"
+          test "$RUN_HEAD_BRANCH" = "main"
+          echo "ASSURANCE_RUN_ID=$ASSURANCE_RUN_ID" >> "$GITHUB_ENV"
+          mkdir -p dist/signing/source
+          gh run download "$ASSURANCE_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name a11oy-factory-supply-chain-assurance \
+            --dir dist/signing/source
+          printf '%s\n' "$ASSURANCE_RUN_ID" > dist/signing/assurance-run-id.txt
+
+      - name: Locate and verify source evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          SCAN="$(find dist/signing/source -type f -name python-environment-scan.json -print -quit)"
+          RUNTIME_PROOF="$(find dist/signing/source -type f -name runtime-proof.json -print -quit)"
+          DISTRIBUTION_LOCK="$(find dist/signing/source -type f -name factory.lock.json -print -quit)"
+          INITIAL_STABLE_VERDICT="$(find dist/signing/source -type f -name stable-verdict.json -print -quit)"
+          test -n "$SCAN" && test -f "$SCAN"
+          test -n "$RUNTIME_PROOF" && test -f "$RUNTIME_PROOF"
+          test -n "$DISTRIBUTION_LOCK" && test -f "$DISTRIBUTION_LOCK"
+          test -n "$INITIAL_STABLE_VERDICT" && test -f "$INITIAL_STABLE_VERDICT"
+          echo "SCAN=$SCAN" >> "$GITHUB_ENV"
+          echo "RUNTIME_PROOF=$RUNTIME_PROOF" >> "$GITHUB_ENV"
+          echo "DISTRIBUTION_LOCK=$DISTRIBUTION_LOCK" >> "$GITHUB_ENV"
+          echo "INITIAL_STABLE_VERDICT=$INITIAL_STABLE_VERDICT" >> "$GITHUB_ENV"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from a11oy_factory.assurance import verify_verdict
+          from a11oy_factory.signed_promotion import verify_embedded_digest
+
+          scan = json.loads(Path(os.environ["SCAN"]).read_text(encoding="utf-8"))
+          runtime = json.loads(Path(os.environ["RUNTIME_PROOF"]).read_text(encoding="utf-8"))
+          stable = json.loads(Path(os.environ["INITIAL_STABLE_VERDICT"]).read_text(encoding="utf-8"))
+          assert verify_embedded_digest(scan)
+          assert verify_embedded_digest(runtime)
+          assert verify_verdict(stable)
+          assert scan["osv"]["complete"] is True
+          assert runtime["runtime_execution_verified"] is True
+          assert runtime["production_runtime_certified"] is False
+          assert stable["channel"] == "stable"
+          assert stable["cryptographic_signature"] is False
+          signature_issues = [
+              issue for issue in stable["issues"]
+              if issue.get("code") == "CRYPTOGRAPHIC_SIGNATURE_REQUIRED"
+          ]
+          assert len(signature_issues) == 1
+          PY
+
+      - name: Build canonical assurance signing subject
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/signing/output
+          python scripts/build_assurance_signing_subject.py \
+            --scan "$SCAN" \
+            --runtime-proof "$RUNTIME_PROOF" \
+            --distribution-lock "$DISTRIBUTION_LOCK" \
+            --stable-verdict "$INITIAL_STABLE_VERDICT" \
+            --stable-policy factory/policy/assurance-stable.json \
+            --output dist/signing/output/assurance-signing-subject.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from a11oy_factory.signed_promotion import canonical_bytes, validate_signing_subject
+
+          path = Path("dist/signing/output/assurance-signing-subject.json")
+          subject = json.loads(path.read_text(encoding="utf-8"))
+          validate_signing_subject(subject)
+          path.write_bytes(canonical_bytes(subject))
+          assert path.read_bytes() == canonical_bytes(subject)
+          PY
+          sha256sum dist/signing/output/assurance-signing-subject.json \
+            > dist/signing/output/assurance-signing-subject.sha256
+
+      - name: Build exact Cosign release from source
+        shell: bash
+        run: |
+          set -euo pipefail
+          go version | tee dist/signing/output/go-version.txt
+          export GOBIN="${RUNNER_TEMP}/a11oy-cosign/bin"
+          mkdir -p "$GOBIN"
+          timeout 20m go install "github.com/sigstore/cosign/v2/cmd/cosign@${COSIGN_VERSION}"
+          COSIGN="$GOBIN/cosign"
+          test -x "$COSIGN"
+          echo "COSIGN=$COSIGN" >> "$GITHUB_ENV"
+          "$COSIGN" version | tee dist/signing/output/cosign-version.txt
+          sha256sum "$COSIGN" | tee dist/signing/output/cosign-binary.sha256
+
+      - name: Issue keyless Sigstore signature and transparency entry
+        shell: bash
+        env:
+          COSIGN_YES: "true"
+        run: |
+          set -euo pipefail
+          SUBJECT=dist/signing/output/assurance-signing-subject.json
+          BUNDLE=dist/signing/output/assurance-signing-subject.sigstore.json
+          success=false
+          for attempt in 1 2 3; do
+            if timeout 8m "$COSIGN" sign-blob \
+              --yes \
+              --bundle "$BUNDLE" \
+              "$SUBJECT" \
+              > dist/signing/output/cosign-sign-output.txt; then
+              success=true
+              break
+            fi
+            echo "Sigstore signing attempt ${attempt} failed; retrying." >&2
+            sleep $((attempt * 5))
+          done
+          test "$success" = "true"
+          test -s "$BUNDLE"
+
+      - name: Verify exact certificate identity, issuer, subject, and transparency proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          SUBJECT=dist/signing/output/assurance-signing-subject.json
+          BUNDLE=dist/signing/output/assurance-signing-subject.sigstore.json
+          "$COSIGN" verify-blob \
+            --bundle "$BUNDLE" \
+            --certificate-identity "$SIGSTORE_CERTIFICATE_IDENTITY" \
+            --certificate-oidc-issuer "$SIGSTORE_OIDC_ISSUER" \
+            "$SUBJECT" \
+            | tee dist/signing/output/cosign-verification.txt
+          touch dist/signing/output/cosign-verified.ok
+
+      - name: Emit keyless verification receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/emit_sigstore_proof.py \
+            --subject dist/signing/output/assurance-signing-subject.json \
+            --bundle dist/signing/output/assurance-signing-subject.sigstore.json \
+            --verified-marker dist/signing/output/cosign-verified.ok \
+            --cosign-binary "$COSIGN" \
+            --cosign-version-file dist/signing/output/cosign-version.txt \
+            --identity "$SIGSTORE_CERTIFICATE_IDENTITY" \
+            --issuer "$SIGSTORE_OIDC_ISSUER" \
+            --output dist/signing/output/sigstore-verification-proof.json
+
+      - name: Finalize signed stable promotion verdict
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/finalize_signed_promotion.py \
+            --initial-stable-verdict "$INITIAL_STABLE_VERDICT" \
+            --subject dist/signing/output/assurance-signing-subject.json \
+            --sigstore-proof dist/signing/output/sigstore-verification-proof.json \
+            --output dist/signing/output/signed-stable-verdict.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from a11oy_factory.signed_promotion import verify_signed_promotion
+
+          initial = json.loads(Path("${INITIAL_STABLE_VERDICT}").read_text(encoding="utf-8"))
+          signed = json.loads(Path("dist/signing/output/signed-stable-verdict.json").read_text(encoding="utf-8"))
+          assert verify_signed_promotion(signed)
+          assert signed["signer"] == "SIGSTORE-keyless"
+          assert signed["cryptographic_signature"] is True
+          assert signed["transparency_log_verified"] is True
+          assert signed["runtime_execution_verified"] is True
+          assert signed["production_runtime_certified"] is False
+          assert all(issue.get("code") != "CRYPTOGRAPHIC_SIGNATURE_REQUIRED" for issue in signed["issues"])
+          assert signed["counts"]["initial_issues"] == len(initial["issues"])
+          assert signed["counts"]["resolved_signature_issues"] == 1
+          print(json.dumps({
+              "decision": signed["decision"],
+              "remaining_issues": signed["counts"]["remaining_issues"],
+              "signer": signed["signer"],
+              "transparency_log_verified": signed["transparency_log_verified"],
+              "runtime_execution_verified": signed["runtime_execution_verified"],
+              "production_runtime_certified": signed["production_runtime_certified"],
+              "proof_sha256": signed["proof_sha256"],
+          }, indent=2, sort_keys=True))
+          PY
+
+      - name: Copy bound source evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p dist/signing/output/source-evidence
+          for variable in SCAN RUNTIME_PROOF DISTRIBUTION_LOCK INITIAL_STABLE_VERDICT; do
+            value="${!variable:-}"
+            if [ -n "$value" ] && [ -f "$value" ]; then
+              cp "$value" "dist/signing/output/source-evidence/$(basename "$value")"
+            fi
+          done
+          cp factory/policy/assurance-stable.json dist/signing/output/source-evidence/assurance-stable.json
+          cp dist/signing/assurance-run-id.txt dist/signing/output/source-evidence/assurance-run-id.txt
+
+      - name: Upload immutable signing evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: a11oy-factory-keyless-signing-proof
+          path: dist/signing/output
+          if-no-files-found: error
+          retention-days: 90
+
+  gate:
+    name: Keyless signing gate
+    if: always()
+    needs: [contract, sign]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require contract and real signing execution
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          CONTRACT_RESULT: ${{ needs.contract.result }}
+          SIGN_RESULT: ${{ needs.sign.result }}
+        run: |
+          set -euo pipefail
+          test "$CONTRACT_RESULT" = "success"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            test "$SIGN_RESULT" = "skipped"
+            echo "Signing contracts passed; OIDC issuance is reserved for trusted main-branch execution."
+          elif [ "$EVENT_NAME" = "workflow_run" ] && [ "$WORKFLOW_RUN_CONCLUSION" != "success" ]; then
+            test "$SIGN_RESULT" = "skipped"
+            echo "Upstream assurance failed; signing correctly remained fail closed."
+          else
+            test "$SIGN_RESULT" = "success"
+            echo "The assurance subject was keylessly signed, identity-verified, transparency-verified, and receipted."
+          fi
