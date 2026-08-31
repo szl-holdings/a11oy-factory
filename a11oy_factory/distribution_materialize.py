@@ -19,6 +19,48 @@ from .distribution_common import (
     _validate_lock_shape,
 )
 
+
+def _response_url(response: Any, fallback: str) -> str:
+    """Return the post-redirect URL when the HTTP response exposes one."""
+
+    getter = getattr(response, "geturl", None)
+    if callable(getter):
+        value = getter()
+        if isinstance(value, str) and value.strip():
+            return value
+    return fallback
+
+
+def _assert_allowed_url(
+    uri: str,
+    *,
+    allowed_hosts: set[str],
+    component_id: str,
+    phase: str,
+) -> str:
+    parsed = urllib.parse.urlparse(uri)
+    if parsed.scheme != "https":
+        raise FactoryError(
+            f"materialize_{phase}_scheme",
+            f"Refusing non-HTTPS {phase} source for {component_id}.",
+            details={"component": component_id, "uri": uri},
+        )
+    host = (parsed.hostname or "").lower()
+    if not host:
+        raise FactoryError(
+            f"materialize_{phase}_host",
+            f"The {phase} source for {component_id!r} has no host.",
+            details={"component": component_id, "uri": uri},
+        )
+    if allowed_hosts and host not in allowed_hosts:
+        raise FactoryError(
+            f"materialize_{phase}_host",
+            f"Source host {host!r} is not allowed.",
+            details={"component": component_id, "uri": uri, "phase": phase},
+        )
+    return host
+
+
 def materialize_artifacts(
     lock: Mapping[str, Any],
     destination: str | os.PathLike[str],
@@ -30,12 +72,18 @@ def materialize_artifacts(
     """Download pinned artifacts atomically and verify exact size and SHA-256.
 
     This function does not execute artifacts. Network access is explicit and
-    restricted to policy-approved hosts.
+    restricted to policy-approved hosts. The final post-redirect URL is checked
+    again so an approved origin cannot redirect materialization to an
+    unapproved host or downgrade the connection.
     """
 
     _validate_lock_shape(lock)
     policy = lock["policy"]["effective"]
-    allowed_hosts = set(policy.get("allowed_source_hosts") or [])
+    allowed_hosts = {
+        str(host).strip().lower()
+        for host in (policy.get("allowed_source_hosts") or [])
+        if str(host).strip()
+    }
     max_bytes = int(policy.get("max_artifact_bytes", 0) or 0)
     selected = set(component_ids or [])
     destination_path = Path(destination)
@@ -50,12 +98,12 @@ def materialize_artifacts(
         if source.get("type") not in {"artifact", "oci"}:
             continue
         uri = str(source["uri"])
-        parsed = urllib.parse.urlparse(uri)
-        if parsed.scheme != "https":
-            raise FactoryError("materialize_scheme", f"Refusing non-HTTPS source for {component_id}.")
-        host = parsed.hostname or ""
-        if allowed_hosts and host not in allowed_hosts:
-            raise FactoryError("materialize_host", f"Source host {host!r} is not allowed.", details={"component": component_id})
+        origin_host = _assert_allowed_url(
+            uri,
+            allowed_hosts=allowed_hosts,
+            component_id=component_id,
+            phase="origin",
+        )
         expected_size = int(source["size"])
         if max_bytes and expected_size > max_bytes:
             raise FactoryError("materialize_size", f"Artifact {component_id!r} exceeds the configured size cap.")
@@ -73,6 +121,8 @@ def materialize_artifacts(
                         "path": str(target),
                         "size": actual_size,
                         "sha256": actual_digest,
+                        "origin_host": origin_host,
+                        "final_host": origin_host,
                         "status": "REUSED_VERIFIED",
                     }
                 )
@@ -92,6 +142,13 @@ def materialize_artifacts(
         count = 0
         try:
             with opener(request, timeout=timeout_s) as response, temp_path.open("wb") as output:
+                final_uri = _response_url(response, uri)
+                final_host = _assert_allowed_url(
+                    final_uri,
+                    allowed_hosts=allowed_hosts,
+                    component_id=component_id,
+                    phase="redirect",
+                )
                 content_length = response.headers.get("Content-Length") if hasattr(response, "headers") else None
                 if content_length is not None:
                     declared = int(content_length)
@@ -132,6 +189,8 @@ def materialize_artifacts(
                     "path": str(target),
                     "size": count,
                     "sha256": actual_digest,
+                    "origin_host": origin_host,
+                    "final_host": final_host,
                     "status": "DOWNLOADED_VERIFIED",
                 }
             )
@@ -152,6 +211,6 @@ def materialize_artifacts(
         "decision": "ALLOW",
         "lock_digest": lock["lock_digest"],
         "artifacts": receipts,
-        "note": "Bytes and digests verified. Artifacts were not executed.",
+        "note": "Bytes, redirect policy, sizes, and digests verified. Artifacts were not executed.",
     }
     return {**body, "receipt_hash": _digest_prefixed(body)}

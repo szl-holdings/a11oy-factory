@@ -1,0 +1,240 @@
+# Copyright 2026 SZL Holdings — SPDX-License-Identifier: Apache-2.0
+name: factory-artifact-qualification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "factory/catalog.json"
+      - "factory/profiles/**"
+      - "a11oy_factory/distribution_materialize.py"
+      - "tests/test_materialization_security.py"
+      - ".github/workflows/factory-artifact-qualification.yml"
+  pull_request:
+    paths:
+      - "factory/catalog.json"
+      - "factory/profiles/**"
+      - "a11oy_factory/distribution_materialize.py"
+      - "tests/test_materialization_security.py"
+      - ".github/workflows/factory-artifact-qualification.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: factory-artifact-qualification-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Validate qualification contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Run complete fail-closed suite
+        run: python -m unittest discover -s tests -v
+
+      - name: Resolve every target profile
+        run: |
+          set -euo pipefail
+          for profile in factory/profiles/*.json; do
+            python -m a11oy_factory distro validate \
+              --catalog factory/catalog.json \
+              --profile "$profile"
+          done
+
+      - name: Validate unique qualification matrix
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          catalog = json.loads(Path("factory/catalog.json").read_text(encoding="utf-8"))
+          ids = [component["id"] for component in catalog["components"]]
+          expected = {
+              "pytorch-source",
+              "vllm-cpu-amd64",
+              "vllm-cpu-arm64",
+              "vllm-cuda129-amd64",
+              "vllm-cuda129-arm64",
+              "vllm-xpu-amd64",
+          }
+          assert set(ids) == expected, (ids, expected)
+          assert len(ids) == len(set(ids))
+          hosts = set(catalog["policy_defaults"]["allowed_source_hosts"])
+          assert "github.com" in hosts
+          assert "release-assets.githubusercontent.com" in hosts
+          print(json.dumps({"ok": True, "components": sorted(ids), "hosts": sorted(hosts)}, indent=2))
+          PY
+
+  materialize:
+    name: Verify upstream bytes — ${{ matrix.component }}
+    if: github.event_name != 'pull_request'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - component: pytorch-source
+            profile: vllm-cpu-amd64
+          - component: vllm-cpu-amd64
+            profile: vllm-cpu-amd64
+          - component: vllm-cpu-arm64
+            profile: vllm-cpu-arm64
+          - component: vllm-cuda129-amd64
+            profile: vllm-cuda129-amd64
+          - component: vllm-cuda129-arm64
+            profile: vllm-cuda129-arm64
+          - component: vllm-xpu-amd64
+            profile: vllm-xpu-amd64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Compile target lock and evidence bundle
+        env:
+          COMPONENT: ${{ matrix.component }}
+          PROFILE: ${{ matrix.profile }}
+        run: |
+          set -euo pipefail
+          OUT="dist/qualification/${COMPONENT}"
+          python -m a11oy_factory distro bundle \
+            --catalog factory/catalog.json \
+            --profile "factory/profiles/${PROFILE}.json" \
+            --out-dir "$OUT"
+
+      - name: Download and verify exact upstream bytes
+        env:
+          COMPONENT: ${{ matrix.component }}
+        run: |
+          set -euo pipefail
+          OUT="dist/qualification/${COMPONENT}"
+          mkdir -p "$OUT/artifacts"
+          timeout 20m python -m a11oy_factory distro materialize \
+            --lock "$OUT/factory.lock.json" \
+            --component "$COMPONENT" \
+            --out-dir "$OUT/artifacts" \
+            --timeout 300 \
+            > "$OUT/materialization.json"
+          cat "$OUT/materialization.json"
+
+      - name: Independently rehash qualified bytes
+        env:
+          COMPONENT: ${{ matrix.component }}
+          PROFILE: ${{ matrix.profile }}
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          component_id = os.environ["COMPONENT"]
+          profile_id = os.environ["PROFILE"]
+          root = Path("dist/qualification") / component_id
+          catalog = json.loads(Path("factory/catalog.json").read_text(encoding="utf-8"))
+          materialization = json.loads((root / "materialization.json").read_text(encoding="utf-8"))
+          component = next(item for item in catalog["components"] if item["id"] == component_id)
+          records = materialization.get("artifacts") or []
+          assert materialization.get("ok") is True
+          assert materialization.get("decision") == "ALLOW"
+          assert len(records) == 1, records
+          record = records[0]
+          artifact = Path(record["path"])
+          assert artifact.is_file(), artifact
+
+          hasher = hashlib.sha256()
+          size = 0
+          with artifact.open("rb") as handle:
+              while True:
+                  chunk = handle.read(1024 * 1024)
+                  if not chunk:
+                      break
+                  size += len(chunk)
+                  hasher.update(chunk)
+
+          expected_digest = component["source"]["digest"].removeprefix("sha256:")
+          expected_size = component["source"]["size"]
+          allowed_hosts = set(catalog["policy_defaults"]["allowed_source_hosts"])
+          assert size == expected_size, (size, expected_size)
+          assert hasher.hexdigest() == expected_digest
+          assert record["size"] == expected_size
+          assert record["sha256"] == expected_digest
+          assert record["status"] in {"DOWNLOADED_VERIFIED", "REUSED_VERIFIED"}
+          assert record["origin_host"] in allowed_hosts
+          assert record["final_host"] in allowed_hosts
+
+          proof = {
+              "schema": "a11oy.factory.artifact-qualification/v1",
+              "ok": True,
+              "decision": "ALLOW",
+              "qualified_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+              "component": component_id,
+              "profile": profile_id,
+              "filename": artifact.name,
+              "size": size,
+              "sha256": hasher.hexdigest(),
+              "origin_host": record["origin_host"],
+              "final_host": record["final_host"],
+              "lock_digest": materialization["lock_digest"],
+              "materialization_receipt_hash": materialization["receipt_hash"],
+              "bytes_executed": False,
+              "bytes_retained_in_actions_artifact": False,
+              "runtime_certified": False,
+          }
+          (root / "qualification.json").write_text(
+              json.dumps(proof, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(proof, indent=2, sort_keys=True))
+          PY
+
+      - name: Purge large binaries after proof capture
+        env:
+          COMPONENT: ${{ matrix.component }}
+        run: rm -rf "dist/qualification/${COMPONENT}/artifacts"
+
+      - name: Upload immutable qualification receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: a11oy-qualified-${{ matrix.component }}
+          path: dist/qualification/${{ matrix.component }}
+          if-no-files-found: error
+          retention-days: 30
+
+  complete:
+    name: Qualification gate
+    if: always() && github.event_name != 'pull_request'
+    needs: [contract, materialize]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every qualification job
+        env:
+          CONTRACT_RESULT: ${{ needs.contract.result }}
+          MATERIALIZE_RESULT: ${{ needs.materialize.result }}
+        run: |
+          test "$CONTRACT_RESULT" = "success"
+          test "$MATERIALIZE_RESULT" = "success"
+          echo "All six immutable upstream artifacts were downloaded, redirect-checked, size-checked, SHA-256 checked, independently rehashed, and receipted."
