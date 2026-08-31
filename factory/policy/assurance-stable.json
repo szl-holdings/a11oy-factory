@@ -1,0 +1,20 @@
+{
+  "schema": "a11oy.factory.assurance-policy/v1",
+  "id": "stable-v1",
+  "channel": "stable",
+  "block_severities": [
+    "HIGH",
+    "CRITICAL"
+  ],
+  "block_unknown_severity": true,
+  "minimum_license_status": "DECLARED",
+  "require_osv_complete": true,
+  "require_runtime_execution": true,
+  "require_production_runtime_certification": false,
+  "require_cryptographic_signature": true,
+  "require_download_hashes": true,
+  "notes": [
+    "Stable requires current vulnerability evidence, declared licensing, exact download hashes, scoped execution, and a cryptographic signature.",
+    "UNSIGNED-honest hashes remain tamper-evident but cannot satisfy this channel."
+  ]
+}
