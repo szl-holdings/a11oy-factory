@@ -64,6 +64,7 @@ jobs:
           ids = [component["id"] for component in catalog["components"]]
           expected = {
               "pytorch-source",
+              "pytorch-cpu-amd64",
               "vllm-cpu-amd64",
               "vllm-cpu-arm64",
               "vllm-cuda129-amd64",
@@ -75,6 +76,8 @@ jobs:
           hosts = set(catalog["policy_defaults"]["allowed_source_hosts"])
           assert "github.com" in hosts
           assert "release-assets.githubusercontent.com" in hosts
+          assert "download.pytorch.org" in hosts
+          assert "download-r2.pytorch.org" in hosts
           print(json.dumps({"ok": True, "components": sorted(ids), "hosts": sorted(hosts)}, indent=2))
           PY
 
@@ -90,6 +93,8 @@ jobs:
       matrix:
         include:
           - component: pytorch-source
+            profile: vllm-cpu-arm64
+          - component: pytorch-cpu-amd64
             profile: vllm-cpu-amd64
           - component: vllm-cpu-amd64
             profile: vllm-cpu-amd64
@@ -237,4 +242,4 @@ jobs:
         run: |
           test "$CONTRACT_RESULT" = "success"
           test "$MATERIALIZE_RESULT" = "success"
-          echo "All six immutable upstream artifacts were downloaded, redirect-checked, size-checked, SHA-256 checked, independently rehashed, and receipted."
+          echo "All seven immutable upstream artifacts were downloaded, redirect-checked, size-checked, SHA-256 checked, independently rehashed, and receipted."
