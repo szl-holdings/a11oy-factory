@@ -277,7 +277,10 @@
       "BSD-3-Clause"
     ],
     "allowed_source_hosts": [
-      "github.com"
+      "github.com",
+      "release-assets.githubusercontent.com",
+      "objects.githubusercontent.com",
+      "github-releases.githubusercontent.com"
     ],
     "block_unpermitted_vulnerability_status": true,
     "denied_licenses": [
