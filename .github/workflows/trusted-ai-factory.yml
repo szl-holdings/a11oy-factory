@@ -1,0 +1,221 @@
+# Copyright 2026 SZL Holdings — SPDX-License-Identifier: Apache-2.0
+name: trusted-ai-factory
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "a11oy_factory/**"
+      - "factory/**"
+      - "tests/**"
+      - "space/**"
+      - "Dockerfile"
+      - "pyproject.toml"
+      - ".github/workflows/trusted-ai-factory.yml"
+  pull_request:
+    paths:
+      - "a11oy_factory/**"
+      - "factory/**"
+      - "tests/**"
+      - "space/**"
+      - "Dockerfile"
+      - "pyproject.toml"
+      - ".github/workflows/trusted-ai-factory.yml"
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Profile to materialize when explicit download is enabled"
+        required: true
+        default: "vllm-cpu-amd64"
+        type: choice
+        options:
+          - vllm-cpu-amd64
+          - vllm-cpu-arm64
+          - vllm-cuda129-amd64
+          - vllm-cuda129-arm64
+          - vllm-xpu-amd64
+      materialize:
+        description: "Download and byte-verify only the selected root artifact"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trusted-ai-factory-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: Unit and fail-closed tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Test
+        run: python -m unittest discover -s tests -v
+
+      - name: CLI smoke
+        run: |
+          python -m a11oy_factory distro summary --catalog factory/catalog.json
+          python -m a11oy_factory distro validate \
+            --catalog factory/catalog.json \
+            --profile factory/profiles/vllm-cpu-amd64.json
+
+  bundles:
+    name: Bundle ${{ matrix.profile }}
+    needs: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        profile:
+          - vllm-cpu-amd64
+          - vllm-cpu-arm64
+          - vllm-cuda129-amd64
+          - vllm-cuda129-arm64
+          - vllm-xpu-amd64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Compile deterministic distribution bundle
+        run: |
+          python -m a11oy_factory distro bundle \
+            --catalog factory/catalog.json \
+            --profile "factory/profiles/${{ matrix.profile }}.json" \
+            --out-dir "dist/${{ matrix.profile }}"
+
+      - name: Verify lock, SBOM, and provenance
+        run: |
+          python -m a11oy_factory distro verify \
+            --catalog factory/catalog.json \
+            --profile "factory/profiles/${{ matrix.profile }}.json" \
+            --lock "dist/${{ matrix.profile }}/factory.lock.json" \
+            --sbom "dist/${{ matrix.profile }}/factory.spdx.json" \
+            --provenance "dist/${{ matrix.profile }}/factory.provenance.json"
+
+      - name: Upload proof bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: a11oy-factory-${{ matrix.profile }}
+          path: dist/${{ matrix.profile }}
+          if-no-files-found: error
+          retention-days: 30
+
+  container:
+    name: Container build
+    needs: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build pinned container
+        run: docker build --pull --tag a11oy-factory:test .
+
+      - name: Smoke public API
+        run: |
+          docker run --detach --rm --name a11oy-factory -p 7860:7860 a11oy-factory:test
+          trap 'docker stop a11oy-factory >/dev/null 2>&1 || true' EXIT
+          python - <<'PY'
+          import json
+          import time
+          import urllib.request
+
+          for _ in range(40):
+              try:
+                  with urllib.request.urlopen("http://127.0.0.1:7860/healthz", timeout=2) as response:
+                      health = json.load(response)
+                  break
+              except Exception:
+                  time.sleep(0.5)
+          else:
+              raise SystemExit("factory API did not become ready")
+
+          assert health["ok"] is True
+          assert health["factory_core"]["state"] == "LIVE"
+          assert health["factory_core"]["runtime_certified"] is False
+
+          request = urllib.request.Request(
+              "http://127.0.0.1:7860/api/distribution/resolve",
+              data=json.dumps({"profile": "vllm-cpu-amd64"}).encode(),
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          with urllib.request.urlopen(request, timeout=5) as response:
+              bundle = json.load(response)
+          assert bundle["verification"]["ok"] is True
+          assert bundle["lock"]["assurance"]["runtime"] == "NOT_CERTIFIED"
+          PY
+
+  materialize:
+    name: Explicit artifact materialization
+    if: github.event_name == 'workflow_dispatch' && inputs.materialize == true
+    needs: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Compile selected lock
+        run: |
+          python -m a11oy_factory distro bundle \
+            --catalog factory/catalog.json \
+            --profile "factory/profiles/${{ inputs.profile }}.json" \
+            --out-dir "dist/${{ inputs.profile }}"
+
+      - name: Materialize selected root only
+        env:
+          PROFILE: ${{ inputs.profile }}
+        run: |
+          ROOT="$(python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          profile = json.loads(Path(f"factory/profiles/{os.environ['PROFILE']}.json").read_text())
+          print(profile["roots"][0])
+          PY
+          )"
+          python -m a11oy_factory distro materialize \
+            --lock "dist/${PROFILE}/factory.lock.json" \
+            --component "${ROOT}" \
+            --out-dir "dist/${PROFILE}/artifacts"
+
+      - name: Upload verified bytes and receipts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: a11oy-factory-materialized-${{ inputs.profile }}
+          path: dist/${{ inputs.profile }}
+          if-no-files-found: error
+          retention-days: 7

@@ -1,0 +1,54 @@
+{
+  "$id": "https://a-11-oy.com/schemas/factory/profile-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "assurance": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "channel": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]{1,127}$",
+      "type": "string"
+    },
+    "policy": {
+      "type": "object"
+    },
+    "roots": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "schema": {
+      "const": "a11oy.factory.profile/v1"
+    },
+    "source_date_epoch": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "target": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "channel",
+    "assurance",
+    "target",
+    "roots",
+    "source_date_epoch",
+    "policy"
+  ],
+  "title": "A11oy Factory Profile v1",
+  "type": "object"
+}

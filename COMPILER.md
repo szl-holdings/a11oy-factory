@@ -1,63 +1,93 @@
-# Decision Cell Compiler
+# A11oy Factory Compilers
 
-BIND_AS_A11OY_PACKAGE. Not a second flagship.
+`BIND_AS_A11OY_PACKAGE`. Not a second flagship.
 
-The Grok App Builder control plane stays at the repo root. This package is
-the fail-closed compiler that admits **Lyte** and refuses **N1–N25**.
+A11oy Factory contains two deliberately separate compilers.
 
-N1–N25 are named category-capture theatres. Roadmaps are **STARTED** as
-fail-closed organs (`GET /api/roadmap`, `POST /api/act`). STARTED is not LIVE.
-Compiling a frontier still returns BLOCKED / ROADMAP (or UNAVAILABLE for Energy)
-until doctrine names that cell LIVE.
+## 1. Trusted AI Distribution Compiler — LIVE
 
-| Surface | Honesty |
-|---|---|
-| Decision Cell Compiler | LIVE, fail-closed |
-| Admitted Lyte cell | STRUCTURAL-ONLY |
-| N1 Serve (vLLM / SGLang / Ollama / TensorRT-LLM job) | ROADMAP |
-| N2 Graph (LangGraph job) | ROADMAP |
-| N3 Guard (Llama Guard job) | ROADMAP |
-| N4 Mosaic (MosaicML / Databricks job) | ROADMAP |
-| N5 Lattice (immune-lattice overlay bind) | ROADMAP |
-| N6 Cover (Guidewire P&C job) | ROADMAP |
-| N7 Quant (QuantConnect LEAN job) | ROADMAP |
-| N8 Title (Zillow / records job) | ROADMAP |
-| N9 Retrieve (LlamaIndex / Haystack / Letta job) | ROADMAP |
-| N10 Observe (Phoenix / LangSmith / Langfuse / DeepEval job) | ROADMAP |
-| N11 Tune (Unsloth QLoRA job) | ROADMAP |
-| N12 Schema (Outlines / Instructor job) | ROADMAP |
-| N13 Energy (RAPL / NVML joule channel) | UNAVAILABLE |
-| N14 Tool (Anthropic MCP job) | ROADMAP |
-| N15 Memory (Mem0 / Zep Graphiti job) | ROADMAP |
-| N16 Eval (RAGAS / HELM / Arena job) | ROADMAP |
-| N17 Mesh (Dynamo / Ray Serve / llm-d job) | ROADMAP |
-| N18 Route (LiteLLM / OpenRouter / RouteLLM job) | ROADMAP |
-| N19 Cache (LMCache / Mooncake / GPTCache job) | ROADMAP |
-| N20 Voice (LiveKit / Cartesia / Deepgram job) | ROADMAP |
-| N21 Sandbox (Daytona / E2B job) | ROADMAP · STARTED |
-| N22 Identity (SPIFFE / Astrix NHI job) | ROADMAP · STARTED |
-| N23 Rails (NeMo Guardrails job) | ROADMAP · STARTED |
-| N24 Browser (Playwright / Stagehand / Browserbase job) | ROADMAP · STARTED |
-| N25 Policy (Cedar / OPA job) | ROADMAP · STARTED |
-| Organs `/api/act` | STARTED, fail-closed, never LIVE |
-| Sigstore / Cosign | STRUCTURAL-ONLY (hash is tamper-evident, not a signature) |
-| Λ uniqueness | Conjecture 1 OPEN |
-| Signing | UNSIGNED-honest SHA-256 |
+The distribution compiler is production-shaped metadata infrastructure. It:
+
+- validates catalog and target profile contracts;
+- resolves dependency closure deterministically;
+- detects missing dependencies and cycles;
+- enforces immutable source identity, license rules, source-host allowlists,
+  evidence requirements, artifact size caps, target compatibility, and network
+  policy;
+- generates a content-addressed lock, plan-only build graph, SPDX 2.3 SBOM,
+  in-toto/SLSA provenance, A11oy receipt, verification report, and SHA256SUMS;
+- optionally materializes selected release artifacts, streaming and verifying
+  exact size and SHA-256 before atomic rename;
+- never executes a downloaded artifact.
 
 ```bash
 python -m unittest discover -s tests -v
+
+python -m a11oy_factory distro validate \
+  --catalog factory/catalog.json \
+  --profile factory/profiles/vllm-cpu-amd64.json
+
+python -m a11oy_factory distro bundle \
+  --catalog factory/catalog.json \
+  --profile factory/profiles/vllm-cpu-amd64.json \
+  --out-dir dist/vllm-cpu-amd64
+
+python -m a11oy_factory distro verify \
+  --catalog factory/catalog.json \
+  --profile factory/profiles/vllm-cpu-amd64.json \
+  --lock dist/vllm-cpu-amd64/factory.lock.json \
+  --sbom dist/vllm-cpu-amd64/factory.spdx.json \
+  --provenance dist/vllm-cpu-amd64/factory.provenance.json
+```
+
+`LIVE` here means the deterministic compiler and verifier run. It does not
+mean an upstream model or framework has been certified on target hardware.
+
+## 2. Decision Cell Compiler — fail closed
+
+Lyte is the one admitted structural cell. N1–N27 are named theatres. The
+Decision Cell Compiler refuses their runtime admission until doctrine and
+evidence name them LIVE.
+
+| Surface | Honesty |
+|---|---|
+| Trusted AI Distribution Compiler | LIVE |
+| Distribution runtime certification | NOT_CERTIFIED |
+| Distribution vulnerability state | UNVERIFIED in candidate profiles |
+| Distribution signing | UNSIGNED-honest |
+| Decision Cell Compiler | LIVE, fail closed |
+| Admitted Lyte cell | STRUCTURAL-ONLY |
+| N1–N12, N14–N25 | BLOCKED |
+| N13 Energy | UNAVAILABLE without readable RAPL/NVML |
+| N26 Inference energy | REPORTED, BLOCKED |
+| N27 Train | UNAVAILABLE |
+| Λ uniqueness | Conjecture 1 OPEN |
+
+```bash
 python -m a11oy_factory compile --cell lyte
-python -m a11oy_factory compile --cell N9   # BLOCKED, ROADMAP
+python -m a11oy_factory compile --cell N1
 python -m a11oy_factory roadmap
 python -m a11oy_factory act --cell N14 --payload '{"method":"tools/list"}'
 python -m a11oy_factory search --q vllm
-python -m a11oy_factory search --q spiffe
-python -m a11oy_factory search --q nemo
 ```
 
-Space APIs: `GET /api/cells` · `GET /api/jobs` · `GET /api/search?q=` · `GET /api/roadmap` · `POST /api/compile` · `POST /api/act`.
+Public APIs:
 
-Canonical flagship remains [szl-holdings/a11oy](https://github.com/szl-holdings/a11oy).
-This organ does not mint production signatures, run inference, or claim an ATO.
+- `GET /api/distribution`
+- `GET /api/distribution/catalog`
+- `GET /api/distribution/profiles`
+- `GET /api/distribution/profiles/{id}`
+- `POST /api/distribution/resolve`
+- `POST /api/distribution/verify`
+- `GET /api/cells`
+- `GET /api/jobs`
+- `GET /api/search?q=`
+- `GET /api/roadmap`
+- `POST /api/compile`
+- `POST /api/act`
 
-Doctrine v11 LOCKED · 749/14/163 · Apache-2.0
+Hash evidence is tamper-evident, not a cryptographic signature. Metadata
+integrity is not vulnerability clearance, runtime compatibility, an ATO, or
+human authority.
+
+Canonical flagship remains `szl-holdings/a11oy`.
