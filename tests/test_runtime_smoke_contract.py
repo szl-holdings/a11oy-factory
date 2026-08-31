@@ -23,7 +23,7 @@ class RuntimeSmokeContractTests(unittest.TestCase):
         self.assertEqual(contract["target"], "linux-amd64-cpu")
         self.assertEqual(contract["runtime_component"], "vllm-cpu-amd64")
         self.assertEqual(contract["torch_component"], "pytorch-cpu-amd64")
-        self.assertEqual(contract["expected_vllm_version"], "0.28.0")
+        self.assertEqual(contract["expected_vllm_version"], "0.28.0+cpu")
         self.assertEqual(contract["expected_torch_version"], "2.13.0+cpu")
         self.assertEqual(
             contract["model"]["revision"],
