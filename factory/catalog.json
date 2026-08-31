@@ -1,0 +1,350 @@
+{
+  "components": [
+    {
+      "build": {
+        "network": false,
+        "steps": []
+      },
+      "description": "PyTorch 2.13.0 source distribution required by the vLLM 0.28.0 build metadata.",
+      "evidence": [
+        {
+          "type": "release-asset-digest",
+          "uri": "https://github.com/pytorch/pytorch/releases/tag/v2.13.0"
+        },
+        {
+          "type": "license-declaration",
+          "uri": "https://github.com/pytorch/pytorch/blob/v2.13.0/LICENSE"
+        },
+        {
+          "type": "compatibility-declaration",
+          "uri": "https://github.com/pytorch/pytorch/releases/tag/v2.13.0"
+        }
+      ],
+      "id": "pytorch-source",
+      "kind": "source-distribution",
+      "license": "BSD-3-Clause",
+      "requires": [],
+      "source": {
+        "digest": "sha256:4ccbafef96c56fbd59769684e74b480abe91d6c57391e64d0ec774a9b0987c17",
+        "filename": "torch-2.13.0.tar.gz",
+        "size": 466957017,
+        "type": "artifact",
+        "uri": "https://github.com/pytorch/pytorch/releases/download/v2.13.0/torch-2.13.0.tar.gz"
+      },
+      "supplier": "PyTorch Foundation",
+      "targets": [
+        "*"
+      ],
+      "version": "2.13.0",
+      "vulnerability": {
+        "note": "Release digest is pinned; no current vulnerability scan is bundled.",
+        "observed_at": null,
+        "scanner": null,
+        "status": "UNVERIFIED"
+      }
+    },
+    {
+      "build": {
+        "network": false,
+        "steps": []
+      },
+      "description": "vLLM 0.28.0 release wheel for linux-amd64-cpu.",
+      "evidence": [
+        {
+          "type": "release-asset-digest",
+          "uri": "https://github.com/vllm-project/vllm/releases/tag/v0.28.0"
+        },
+        {
+          "type": "license-declaration",
+          "uri": "https://github.com/vllm-project/vllm/blob/v0.28.0/LICENSE"
+        },
+        {
+          "type": "compatibility-declaration",
+          "uri": "https://github.com/vllm-project/vllm/blob/v0.28.0/pyproject.toml"
+        }
+      ],
+      "id": "vllm-cpu-amd64",
+      "kind": "python-wheel",
+      "license": "Apache-2.0",
+      "requires": [
+        "pytorch-source"
+      ],
+      "source": {
+        "digest": "sha256:71f69f1549ba5832595db2e85a485d067ba13b62c60055340128fbda0842bb97",
+        "filename": "vllm-0.28.0+cpu-cp38-abi3-manylinux_2_34_x86_64.whl",
+        "size": 130133207,
+        "type": "artifact",
+        "uri": "https://github.com/vllm-project/vllm/releases/download/v0.28.0/vllm-0.28.0%2Bcpu-cp38-abi3-manylinux_2_34_x86_64.whl"
+      },
+      "supplier": "vLLM Project",
+      "targets": [
+        "linux-amd64-cpu"
+      ],
+      "version": "0.28.0",
+      "vulnerability": {
+        "note": "Release digest is pinned; no current vulnerability scan is bundled.",
+        "observed_at": null,
+        "scanner": null,
+        "status": "UNVERIFIED"
+      }
+    },
+    {
+      "build": {
+        "network": false,
+        "steps": []
+      },
+      "description": "vLLM 0.28.0 release wheel for linux-arm64-cpu.",
+      "evidence": [
+        {
+          "type": "release-asset-digest",
+          "uri": "https://github.com/vllm-project/vllm/releases/tag/v0.28.0"
+        },
+        {
+          "type": "license-declaration",
+          "uri": "https://github.com/vllm-project/vllm/blob/v0.28.0/LICENSE"
+        },
+        {
+          "type": "compatibility-declaration",
+          "uri": "https://github.com/vllm-project/vllm/blob/v0.28.0/pyproject.toml"
+        }
+      ],
+      "id": "vllm-cpu-arm64",
+      "kind": "python-wheel",
+      "license": "Apache-2.0",
+      "requires": [
+        "pytorch-source"
+      ],
+      "source": {
+        "digest": "sha256:38f37515e58a39eb0f23847387ee3790cb5100d3cdfae40a77d0265f135461d1",
+        "filename": "vllm-0.28.0+cpu-cp38-abi3-manylinux_2_34_aarch64.whl",
+        "size": 66167752,
+        "type": "artifact",
+        "uri": "https://github.com/vllm-project/vllm/releases/download/v0.28.0/vllm-0.28.0%2Bcpu-cp38-abi3-manylinux_2_34_aarch64.whl"
+      },
+      "supplier": "vLLM Project",
+      "targets": [
+        "linux-arm64-cpu"
+      ],
+      "version": "0.28.0",
+      "vulnerability": {
+        "note": "Release digest is pinned; no current vulnerability scan is bundled.",
+        "observed_at": null,
+        "scanner": null,
+        "status": "UNVERIFIED"
+      }
+    },
+    {
+      "build": {
+        "network": false,
+        "steps": []
+      },
+      "description": "vLLM 0.28.0 release wheel for linux-amd64-cuda129.",
+      "evidence": [
+        {
+          "type": "release-asset-digest",
+          "uri": "https://github.com/vllm-project/vllm/releases/tag/v0.28.0"
+        },
+        {
+          "type": "license-declaration",
+          "uri": "https://github.com/vllm-project/vllm/blob/v0.28.0/LICENSE"
+        },
+        {
+          "type": "compatibility-declaration",
+          "uri": "https://github.com/vllm-project/vllm/blob/v0.28.0/pyproject.toml"
+        }
+      ],
+      "id": "vllm-cuda129-amd64",
+      "kind": "python-wheel",
+      "license": "Apache-2.0",
+      "requires": [
+        "pytorch-source"
+      ],
+      "source": {
+        "digest": "sha256:8ec943b66a0c6b4351d0778e99d7bacfca5788dd8eedd49425092bacb61c4397",
+        "filename": "vllm-0.28.0+cu129-cp38-abi3-manylinux_2_28_x86_64.whl",
+        "size": 548009842,
+        "type": "artifact",
+        "uri": "https://github.com/vllm-project/vllm/releases/download/v0.28.0/vllm-0.28.0%2Bcu129-cp38-abi3-manylinux_2_28_x86_64.whl"
+      },
+      "supplier": "vLLM Project",
+      "targets": [
+        "linux-amd64-cuda129"
+      ],
+      "version": "0.28.0",
+      "vulnerability": {
+        "note": "Release digest is pinned; no current vulnerability scan is bundled.",
+        "observed_at": null,
+        "scanner": null,
+        "status": "UNVERIFIED"
+      }
+    },
+    {
+      "build": {
+        "network": false,
+        "steps": []
+      },
+      "description": "vLLM 0.28.0 release wheel for linux-arm64-cuda129.",
+      "evidence": [
+        {
+          "type": "release-asset-digest",
+          "uri": "https://github.com/vllm-project/vllm/releases/tag/v0.28.0"
+        },
+        {
+          "type": "license-declaration",
+          "uri": "https://github.com/vllm-project/vllm/blob/v0.28.0/LICENSE"
+        },
+        {
+          "type": "compatibility-declaration",
+          "uri": "https://github.com/vllm-project/vllm/blob/v0.28.0/pyproject.toml"
+        }
+      ],
+      "id": "vllm-cuda129-arm64",
+      "kind": "python-wheel",
+      "license": "Apache-2.0",
+      "requires": [
+        "pytorch-source"
+      ],
+      "source": {
+        "digest": "sha256:09ae6e121339b3208b628aa17158bf2300dfbee9658fa296e4565b82afec0511",
+        "filename": "vllm-0.28.0+cu129-cp38-abi3-manylinux_2_28_aarch64.whl",
+        "size": 521137608,
+        "type": "artifact",
+        "uri": "https://github.com/vllm-project/vllm/releases/download/v0.28.0/vllm-0.28.0%2Bcu129-cp38-abi3-manylinux_2_28_aarch64.whl"
+      },
+      "supplier": "vLLM Project",
+      "targets": [
+        "linux-arm64-cuda129"
+      ],
+      "version": "0.28.0",
+      "vulnerability": {
+        "note": "Release digest is pinned; no current vulnerability scan is bundled.",
+        "observed_at": null,
+        "scanner": null,
+        "status": "UNVERIFIED"
+      }
+    },
+    {
+      "build": {
+        "network": false,
+        "steps": []
+      },
+      "description": "vLLM 0.28.0 release wheel for linux-amd64-xpu.",
+      "evidence": [
+        {
+          "type": "release-asset-digest",
+          "uri": "https://github.com/vllm-project/vllm/releases/tag/v0.28.0"
+        },
+        {
+          "type": "license-declaration",
+          "uri": "https://github.com/vllm-project/vllm/blob/v0.28.0/LICENSE"
+        },
+        {
+          "type": "compatibility-declaration",
+          "uri": "https://github.com/vllm-project/vllm/blob/v0.28.0/pyproject.toml"
+        }
+      ],
+      "id": "vllm-xpu-amd64",
+      "kind": "python-wheel",
+      "license": "Apache-2.0",
+      "requires": [
+        "pytorch-source"
+      ],
+      "source": {
+        "digest": "sha256:14529b4222c3e1df3a900e41a88ece297cbd656f0a1ea16a993b108496c30eaa",
+        "filename": "vllm-0.28.0+xpu-cp38-abi3-manylinux_2_34_x86_64.whl",
+        "size": 29994280,
+        "type": "artifact",
+        "uri": "https://github.com/vllm-project/vllm/releases/download/v0.28.0/vllm-0.28.0%2Bxpu-cp38-abi3-manylinux_2_34_x86_64.whl"
+      },
+      "supplier": "vLLM Project",
+      "targets": [
+        "linux-amd64-xpu"
+      ],
+      "version": "0.28.0",
+      "vulnerability": {
+        "note": "Release digest is pinned; no current vulnerability scan is bundled.",
+        "observed_at": null,
+        "scanner": null,
+        "status": "UNVERIFIED"
+      }
+    }
+  ],
+  "name": "A11oy Trusted AI Distribution Catalog — vLLM 0.28.0 / PyTorch 2.13.0",
+  "policy_defaults": {
+    "allow_network_builds": false,
+    "allowed_licenses": [
+      "Apache-2.0",
+      "BSD-3-Clause"
+    ],
+    "allowed_source_hosts": [
+      "github.com"
+    ],
+    "block_unpermitted_vulnerability_status": true,
+    "denied_licenses": [
+      "AGPL-3.0-only"
+    ],
+    "max_artifact_bytes": 700000000,
+    "max_components": 64,
+    "permitted_vulnerability_status": [
+      "VERIFIED",
+      "UNVERIFIED"
+    ],
+    "require_immutable_sources": true,
+    "required_evidence_types": [
+      "release-asset-digest",
+      "license-declaration",
+      "compatibility-declaration"
+    ]
+  },
+  "schema": "a11oy.factory.catalog/v1",
+  "snapshot": {
+    "captured_at": "2026-08-31T00:00:00Z",
+    "honesty": "RELEASE-METADATA",
+    "runtime_certified": false,
+    "source": "upstream GitHub release metadata"
+  },
+  "targets": {
+    "linux-amd64-cpu": {
+      "abi": "cp38-abi3",
+      "accelerator": "cpu",
+      "arch": "amd64",
+      "libc": "manylinux_2_34",
+      "os": "linux",
+      "python": "3.12"
+    },
+    "linux-amd64-cuda129": {
+      "abi": "cp38-abi3",
+      "accelerator": "nvidia-cuda",
+      "accelerator_version": "12.9",
+      "arch": "amd64",
+      "libc": "manylinux_2_28",
+      "os": "linux",
+      "python": "3.12"
+    },
+    "linux-amd64-xpu": {
+      "abi": "cp38-abi3",
+      "accelerator": "intel-xpu",
+      "arch": "amd64",
+      "libc": "manylinux_2_34",
+      "os": "linux",
+      "python": "3.12"
+    },
+    "linux-arm64-cpu": {
+      "abi": "cp38-abi3",
+      "accelerator": "cpu",
+      "arch": "arm64",
+      "libc": "manylinux_2_34",
+      "os": "linux",
+      "python": "3.12"
+    },
+    "linux-arm64-cuda129": {
+      "abi": "cp38-abi3",
+      "accelerator": "nvidia-cuda",
+      "accelerator_version": "12.9",
+      "arch": "arm64",
+      "libc": "manylinux_2_28",
+      "os": "linux",
+      "python": "3.12"
+    }
+  }
+}

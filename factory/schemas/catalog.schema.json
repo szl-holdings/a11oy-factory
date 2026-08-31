@@ -1,0 +1,301 @@
+{
+  "$defs": {
+    "component": {
+      "additionalProperties": false,
+      "properties": {
+        "build": {
+          "additionalProperties": false,
+          "properties": {
+            "network": {
+              "type": "boolean"
+            },
+            "steps": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "argv": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "cwd": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "argv"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "network",
+            "steps"
+          ],
+          "type": "object"
+        },
+        "description": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/evidence"
+          },
+          "type": "array"
+        },
+        "id": {
+          "pattern": "^[a-z0-9][a-z0-9._-]{1,127}$",
+          "type": "string"
+        },
+        "kind": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "license": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "requires": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "source": {
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "digest": {
+                  "$ref": "#/$defs/sha256"
+                },
+                "filename": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "size": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": {
+                  "enum": [
+                    "artifact",
+                    "oci"
+                  ]
+                },
+                "uri": {
+                  "$ref": "#/$defs/httpsUri"
+                }
+              },
+              "required": [
+                "type",
+                "uri",
+                "digest",
+                "size"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "revision": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": {
+                  "const": "git"
+                },
+                "uri": {
+                  "$ref": "#/$defs/httpsUri"
+                }
+              },
+              "required": [
+                "type",
+                "uri",
+                "revision"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "supplier": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "targets": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "version": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "vulnerability": {
+          "additionalProperties": true,
+          "properties": {
+            "note": {
+              "type": "string"
+            },
+            "observed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "scanner": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "status": {
+              "enum": [
+                "VERIFIED",
+                "UNVERIFIED",
+                "BLOCKED"
+              ]
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "kind",
+        "license",
+        "supplier",
+        "description",
+        "targets",
+        "requires",
+        "source",
+        "evidence",
+        "vulnerability",
+        "build"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "uri": {
+          "$ref": "#/$defs/httpsUri"
+        }
+      },
+      "required": [
+        "type",
+        "uri"
+      ],
+      "type": "object"
+    },
+    "httpsUri": {
+      "format": "uri",
+      "pattern": "^https://",
+      "type": "string"
+    },
+    "sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "$id": "https://a-11-oy.com/schemas/factory/catalog-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "components": {
+      "items": {
+        "$ref": "#/$defs/component"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "policy_defaults": {
+      "type": "object"
+    },
+    "schema": {
+      "const": "a11oy.factory.catalog/v1"
+    },
+    "snapshot": {
+      "type": "object"
+    },
+    "targets": {
+      "additionalProperties": {
+        "additionalProperties": true,
+        "properties": {
+          "abi": {
+            "type": "string"
+          },
+          "accelerator": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "accelerator_version": {
+            "type": "string"
+          },
+          "arch": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "libc": {
+            "type": "string"
+          },
+          "os": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "python": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "os",
+          "arch",
+          "accelerator",
+          "python"
+        ],
+        "type": "object"
+      },
+      "minProperties": 1,
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema",
+    "name",
+    "targets",
+    "policy_defaults",
+    "components"
+  ],
+  "title": "A11oy Factory Catalog v1",
+  "type": "object"
+}

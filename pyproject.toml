@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "a11oy-factory"
-version = "0.5.0"
-description = "A11oy vertical factory — Decision Cell Compiler. BIND_AS_A11OY_PACKAGE. Not a second flagship."
+version = "0.6.0"
+description = "Governed AI distribution compiler: deterministic locks, policy gates, SPDX SBOMs, SLSA provenance, and fail-closed receipts."
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.11"

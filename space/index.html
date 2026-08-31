@@ -1,85 +1,44 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>A11oy Factory — Decision Cell Compiler</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#06090d">
+  <meta name="description" content="A11oy Factory — governed distribution compiler for open-source AI software.">
+  <title>A11oy Factory — Trusted AI Distribution</title>
   <style>
-    :root { --bg:#07090d; --fg:#e8edf2; --muted:#8b95a3; --accent:#3af4c8; --halt:#e07a6a; --gold:#e8c074; --line:rgba(232,237,242,.12); --surf:#0d1520; }
-    * { box-sizing: border-box; }
-    body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 "Segoe UI",system-ui,sans-serif; }
-    header, main { max-width:1040px; margin:0 auto; padding:24px 20px; }
-    h1 { font-family: Georgia, serif; font-weight:500; letter-spacing:-.03em; }
-    .kicker { font:11px/1 ui-monospace,Menlo,monospace; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); }
-    .grid { display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); }
-    .card { background:var(--surf); border:1px solid var(--line); border-radius:16px; padding:14px; cursor:pointer; text-align:left; color:inherit; }
-    .card[data-admitted="true"] { border-color: var(--accent); }
-    .card:focus, .card:hover { outline:1px solid var(--gold); }
-    a { color:var(--accent); }
-    pre { white-space:pre-wrap; word-break:break-word; font:12px/1.45 ui-monospace,Menlo,monospace; color:var(--gold); min-height:8rem; background:#101824; border:1px solid var(--line); padding:14px; }
-    .muted { color:var(--muted); font-size:13px; }
-    .chip { display:inline-block; border:1px solid var(--line); padding:3px 8px; font:10px ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin:0 6px 6px 0; }
-    input, button.run { background:#101824; color:var(--fg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font:14px/1.4 inherit; }
-    .row { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 18px; }
-    .row input { flex:1; min-width:180px; }
+    :root{color-scheme:dark;--bg:#06090d;--panel:#0d1520;--panel2:#111d2a;--ink:#edf5f8;--muted:#94a4b3;--line:rgba(221,238,247,.14);--mint:#5af4cf;--mint2:rgba(90,244,207,.12);--gold:#f2ca7f;--red:#ff8e80;--shadow:0 24px 72px rgba(0,0,0,.36)}
+    *{box-sizing:border-box}html{background:var(--bg);scroll-behavior:smooth}body{min-width:320px;margin:0;color:var(--ink);background:radial-gradient(circle at 14% 0,rgba(90,244,207,.14),transparent 34rem),radial-gradient(circle at 88% 4%,rgba(242,202,127,.1),transparent 28rem),linear-gradient(180deg,#080c12,var(--bg) 55%,#05070a);font:16px/1.55 Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body:before{position:fixed;inset:0;z-index:-1;content:"";opacity:.17;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(#000,transparent 76%)}a{color:var(--mint)}button,select,input{font:inherit;min-height:44px}.wrap{width:min(1160px,calc(100% - 32px));margin:auto}.skip{position:fixed;left:12px;top:12px;z-index:30;transform:translateY(-160%);padding:10px 14px;border-radius:10px;color:#04110d;background:var(--mint);font-weight:800}.skip:focus{transform:none}.top{position:sticky;top:0;z-index:20;border-bottom:1px solid var(--line);background:rgba(6,9,13,.78);backdrop-filter:blur(18px)}.topin{min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:14px}.brand{display:flex;align-items:center;gap:11px;color:var(--ink);text-decoration:none;font-weight:850;letter-spacing:-.02em}.mark{width:36px;height:36px;display:grid;place-items:center;border:1px solid rgba(90,244,207,.48);border-radius:11px;background:linear-gradient(145deg,rgba(90,244,207,.18),rgba(242,202,127,.09));font:800 11px/1 ui-monospace,monospace}.status{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid rgba(90,244,207,.27);border-radius:999px;color:var(--mint);background:var(--mint2);font:750 10px/1 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase}.status:before{width:7px;height:7px;content:"";border-radius:50%;background:currentColor;box-shadow:0 0 15px currentColor}.hero{padding:clamp(62px,10vw,118px) 0 46px}.eyebrow{margin:0 0 18px;color:var(--mint);font:750 11px/1.3 ui-monospace,monospace;letter-spacing:.17em;text-transform:uppercase}h1{max-width:920px;margin:0;font:500 clamp(43px,8vw,88px)/.98 Georgia,serif;letter-spacing:-.055em;text-wrap:balance}.lead{max-width:780px;margin:27px 0 0;color:#c7d4dd;font-size:clamp(18px,2.3vw,23px)}.lead strong{color:var(--ink)}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}.btn{display:inline-flex;align-items:center;justify-content:center;padding:11px 16px;border:1px solid var(--line);border-radius:12px;color:var(--ink);background:#111b27;cursor:pointer;text-decoration:none;font-weight:780;transition:.16s ease}.btn:hover{transform:translateY(-1px);border-color:rgba(242,202,127,.55)}.btn.primary{color:#04110d;border-color:var(--mint);background:var(--mint)}.btn.ghost{background:transparent}.btn:focus-visible,.card:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid rgba(90,244,207,.48);outline-offset:3px}.btn[disabled]{opacity:.58;cursor:wait;transform:none}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:34px}.metric{min-height:110px;padding:18px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(145deg,rgba(18,29,43,.78),rgba(8,13,20,.7))}.metric b{display:block;font:600 29px/1.05 Georgia,serif}.metric span{display:block;margin-top:10px;color:var(--muted);font:730 10px/1.3 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase}main{padding:22px 0 90px}.section{margin-top:32px}.head{display:flex;align-items:end;justify-content:space-between;gap:24px;margin-bottom:16px}.head h2{margin:0;font:500 clamp(29px,4vw,43px)/1.08 Georgia,serif;letter-spacing:-.035em}.head p{max-width:650px;margin:0;color:var(--muted)}.panel{overflow:hidden;border:1px solid var(--line);border-radius:22px;background:linear-gradient(145deg,rgba(13,21,32,.93),rgba(7,11,17,.95));box-shadow:var(--shadow)}.twocol{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)}.control,.proofs{padding:clamp(22px,4vw,36px)}.control{border-right:1px solid var(--line)}.control h3,.proofs h3{margin:0 0 8px;font-size:20px}.control>p{margin:0 0 23px;color:var(--muted)}label{display:block;margin-bottom:8px;color:#cad6de;font-size:13px;font-weight:760}select,input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;color:var(--ink);background:#0a111a}.meta{display:grid;gap:7px;margin-top:20px}.meta div{display:flex;justify-content:space-between;gap:18px;padding:9px 0;border-bottom:1px solid var(--line);color:var(--muted);font-size:13px}.meta strong{color:var(--ink);text-align:right;overflow-wrap:anywhere}.proofs{background:radial-gradient(circle at 80% 10%,rgba(90,244,207,.08),transparent 19rem)}.proofgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:18px}.proof{padding:14px;border:1px solid var(--line);border-radius:14px;background:rgba(15,24,35,.72)}.proof b,.proof span{display:block}.proof .state{margin-top:5px;color:var(--mint);font:730 10px/1.2 ui-monospace,monospace;letter-spacing:.08em}.proof .copy{margin-top:7px;color:var(--muted);font-size:12px}.toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;margin-bottom:12px}.cells{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.card{min-height:126px;padding:15px;border:1px solid var(--line);border-radius:16px;color:var(--ink);background:rgba(13,21,32,.88);cursor:pointer;text-align:left;transition:.16s ease}.card:hover{transform:translateY(-2px);border-color:rgba(242,202,127,.5)}.card[data-admitted=true]{border-color:rgba(90,244,207,.5);background:var(--mint2)}.cid{color:var(--gold);font:750 10px/1 ui-monospace,monospace;letter-spacing:.1em}.ctitle{display:block;margin-top:10px;font-weight:820}.ccopy{display:block;margin-top:6px;color:var(--muted);font-size:12px;line-height:1.4}.cstate{display:block;margin-top:11px;color:var(--red);font:730 10px/1 ui-monospace,monospace;letter-spacing:.09em}.card[data-admitted=true] .cstate{color:var(--mint)}.consolehead{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 18px;border-bottom:1px solid var(--line)}.consolehead h2{margin:0;font-size:17px}.console{margin:0;min-height:330px;max-height:620px;overflow:auto;padding:18px;color:#d9e7ed;background:#05080d;white-space:pre-wrap;word-break:break-word;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}.boundary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.boundary article{padding:19px;border:1px solid var(--line);border-radius:17px;background:rgba(13,21,32,.72)}.boundary h3{margin:0 0 7px}.boundary p{margin:0;color:var(--muted);font-size:14px}footer{padding:24px 0 34px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}.foot{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+    @media(max-width:900px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.twocol{grid-template-columns:1fr}.control{border-right:0;border-bottom:1px solid var(--line)}.cells{grid-template-columns:repeat(2,minmax(0,1fr))}.boundary{grid-template-columns:1fr}}
+    @media(max-width:580px){.wrap{width:min(100% - 22px,1160px)}.topin{min-height:61px}.brand span:last-child{display:none}.hero{padding-top:54px}.metrics,.proofgrid,.cells{grid-template-columns:1fr}.metric{min-height:auto}.head{display:block}.head p{margin-top:10px}.toolbar{grid-template-columns:1fr}.actions .btn{width:100%}.meta div{display:block}.meta strong{display:block;margin-top:3px;text-align:left}.status{font-size:9px}}
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
   </style>
 </head>
 <body>
-  <header>
-    <p class="kicker">BIND_AS_A11OY_PACKAGE · not a second flagship</p>
-    <h1>Decision Cell Compiler</h1>
-    <p class="muted">Lyte is the one admitted cell. N1–N25 roadmaps are <b>STARTED</b> as fail-closed organs: compiling them still returns <b>BLOCKED</b>. Actuation halts. Energy is <b>UNAVAILABLE</b>. We cite the leader of the job and take the job, not the code. Hash is UNSIGNED-honest. Λ = Conjecture 1.</p>
-    <p>
-      <span class="chip">Doctrine v11</span>
-      <span class="chip">Lyte STRUCTURAL-ONLY</span>
-      <span class="chip">Roadmaps STARTED · not LIVE</span>
-      <span class="chip">N1 Serve · N2 Graph · N3 Guard · N4 Mosaic</span>
-      <span class="chip">N5 Lattice · N6 Cover · N7 Quant · N8 Title</span>
-      <span class="chip">N9 Retrieve · N10 Observe · N11 Tune · N12 Schema</span>
-      <span class="chip">N13 Energy · N14 Tool · N15 Memory · N16 Eval · N17 Mesh</span>
-      <span class="chip">N18 Route · N19 Cache · N20 Voice · N21 Sandbox</span>
-      <span class="chip">N22 Identity · N23 Rails · N24 Browser · N25 Policy</span>
-    </p>
-  </header>
-  <main>
-    <div class="row">
-      <input id="q" placeholder="search jobs — vllm, mcp, spiffe, nemo, playwright, cedar" aria-label="Search cited jobs"/>
-      <button class="run" id="searchBtn" type="button">Search catalog</button>
-    </div>
-    <div class="grid" id="cells"></div>
-    <section style="margin-top:16px">
-      <h2>Receipt</h2>
-      <pre id="out">select a cell or search a cited job</pre>
-    </section>
-    <p class="muted">Canonical flagship: <a href="https://huggingface.co/spaces/SZLHOLDINGS/a11oy">SZLHOLDINGS/a11oy</a>. Source: <a href="https://github.com/szl-holdings/a11oy-factory">szl-holdings/a11oy-factory</a>. Lyte window: <a href="https://huggingface.co/spaces/SZLHOLDINGS/lyte-services">lyte-services</a>. Merge sink: <a href="https://huggingface.co/spaces/SZLHOLDINGS/evidence-studio">evidence-studio</a>.</p>
-  </main>
-  <script>
-    const box = document.getElementById("cells");
-    const out = document.getElementById("out");
-    async function load() {
-      const cells = await (await fetch("/api/cells")).json();
-      box.innerHTML = cells.map(c =>
-        `<button class="card" data-id="${c.id}" data-admitted="${c.admitted}">
-           <b>${c.id} · ${c.title}</b>
-           <div class="muted">${c.job || (c.admitted ? "admitted" : "ROADMAP")}</div>
-           <div class="muted">${c.admitted ? "ALLOW" : "BLOCKED"}</div>
-         </button>`
-      ).join("");
-      box.querySelectorAll("button").forEach(b => b.onclick = () => compile(b.dataset.id));
-    }
-    async function compile(id) {
-      const r = await fetch("/api/compile", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({cell:id, signal:"factory bind"}) });
-      const a = await fetch("/api/act", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({cell:id}) });
-      out.textContent = JSON.stringify({compile: await r.json(), act: await a.json()}, null, 2);
-    }
-    async function search() {
-      const q = document.getElementById("q").value;
-      const r = await fetch("/api/search?q=" + encodeURIComponent(q));
-      out.textContent = JSON.stringify(await r.json(), null, 2);
-    }
-    document.getElementById("searchBtn").onclick = search;
-    document.getElementById("q").addEventListener("keydown", e => { if (e.key === "Enter") search(); });
-    load().catch(err => { out.textContent = String(err); });
-  </script>
+<a class="skip" href="#main">Skip to content</a>
+<nav class="top" aria-label="Primary"><div class="wrap topin"><a class="brand" href="#"><span class="mark">A11</span><span>A11oy Factory</span></a><span class="status" id="topState">checking</span></div></nav>
+<header class="hero"><div class="wrap"><p class="eyebrow">Trusted factory for open-source AI software</p><h1>One governed dependency graph from source to compute.</h1><p class="lead">A11oy Factory turns exact upstream releases into <strong>target-specific locks, policy verdicts, SBOMs, provenance, receipts, and verified bytes</strong>—without pretending metadata integrity is runtime safety.</p><div class="actions"><a class="btn primary" href="#compiler">Open compiler</a><a class="btn ghost" href="https://github.com/szl-holdings/a11oy-factory">Inspect source</a></div><div class="metrics" aria-label="Factory metrics"><div class="metric"><b id="components">—</b><span>Catalog components</span></div><div class="metric"><b id="profiles">—</b><span>Hardware profiles</span></div><div class="metric"><b id="accelerators">—</b><span>Accelerator classes</span></div><div class="metric"><b>6</b><span>Proof artifacts</span></div></div></div></header>
+<main id="main" class="wrap">
+<section id="compiler" class="section" aria-labelledby="compilerTitle"><div class="head"><div><p class="eyebrow">Factory Core v1</p><h2 id="compilerTitle">Compile a distribution</h2></div><p>Select a hardware target. The server resolves the exact dependency closure and returns a self-verifying proof bundle.</p></div><div class="panel twocol"><div class="control"><h3>Target profile</h3><p>Candidate profiles are integrity-locked and preserve unverified security or runtime claims as warnings.</p><label for="profile">Distribution profile</label><select id="profile"></select><div class="actions"><button class="btn primary" id="compile" type="button">Generate bundle</button><button class="btn" id="catalog" type="button">View catalog</button></div><div class="meta"><div>Target <strong id="target">—</strong></div><div>Root <strong id="root">—</strong></div><div>Assurance <strong id="assurance">—</strong></div><div>Runtime <strong>NOT_CERTIFIED</strong></div></div></div><div class="proofs"><h3>Every bundle contains</h3><div class="proofgrid"><div class="proof"><b>Factory lock</b><span class="state">CONTENT ADDRESSED</span><span class="copy">Exact graph, digest, target, policy, and receipt.</span></div><div class="proof"><b>Build plan</b><span class="state">PLAN ONLY</span><span class="copy">Execution and networking remain explicit.</span></div><div class="proof"><b>SPDX 2.3</b><span class="state">DETERMINISTIC</span><span class="copy">Packages, licenses, checksums, relationships.</span></div><div class="proof"><b>SLSA provenance</b><span class="state">IN-TOTO V1</span><span class="copy">Resolved materials and builder identity.</span></div><div class="proof"><b>A11oy receipt</b><span class="state">HASH CHAINED</span><span class="copy">UNSIGNED-honest until a real signer exists.</span></div><div class="proof"><b>Verification</b><span class="state">FAIL CLOSED</span><span class="copy">Any modified document is rejected.</span></div></div></div></div></section>
+<section class="section" aria-labelledby="cellTitle"><div class="head"><div><p class="eyebrow">Decision Cell Compiler</p><h2 id="cellTitle">Runtime claims stay separate</h2></div><p>The metadata factory can be LIVE while inference, training, browsing, policy, and hardware actuation remain BLOCKED or UNAVAILABLE.</p></div><div class="toolbar"><input id="query" type="search" placeholder="Search jobs: vllm, mcp, spiffe, nemo, cedar…" aria-label="Search cited jobs"><button class="btn" id="search" type="button">Search catalog</button></div><div class="cells" id="cellGrid" aria-live="polite"></div></section>
+<section class="section" aria-labelledby="consoleTitle"><div class="panel"><div class="consolehead"><h2 id="consoleTitle">Evidence console</h2><button class="btn ghost" id="copy" type="button">Copy JSON</button></div><pre class="console" id="output" tabindex="0">Loading factory state…</pre></div></section>
+<section class="section boundary" aria-label="Trust boundary"><article><h3>Integrity is real</h3><p>Release artifacts are pinned by exact byte length and SHA-256. A changed byte fails verification.</p></article><article><h3>Security is separate</h3><p>Candidate profiles preserve vulnerability state as UNVERIFIED. Integrity is never mislabeled as clearance.</p></article><article><h3>Runtime proof is separate</h3><p>Compatibility declarations are not hardware execution. Runtime certification remains closed until measured evidence exists.</p></article></section>
+</main>
+<footer><div class="wrap foot"><span>A11oy Factory · Apache-2.0 · UNSIGNED-honest</span><span><a href="https://github.com/szl-holdings/a11oy-factory">Source</a> · <a href="https://huggingface.co/spaces/SZLHOLDINGS/a11oy">Canonical flagship</a></span></div></footer>
+<script>
+"use strict";
+const S={profiles:[],value:null},$=id=>document.getElementById(id),out=$("output"),select=$("profile");
+function show(v){S.value=v;out.textContent=typeof v==="string"?v:JSON.stringify(v,null,2)}
+async function get(url,options){const r=await fetch(url,options),ct=r.headers.get("content-type")||"",v=ct.includes("json")?await r.json():await r.text();if(!r.ok)throw new Error(v?.error?.message||`Request failed: ${r.status}`);return v}
+function selected(){return S.profiles.find(p=>p.id===select.value)}
+function meta(){const p=selected();$("target").textContent=p?.target||"—";$("root").textContent=p?.roots?.join(", ")||"—";$("assurance").textContent=p?.assurance||"—"}
+function card(c){const b=document.createElement("button");b.type="button";b.className="card";b.dataset.admitted=String(!!c.admitted);b.setAttribute("aria-label",`${c.id} ${c.title}: ${c.admitted?"admitted":"blocked"}`);for(const [klass,text] of [["cid",c.id],["ctitle",c.title],["ccopy",c.job||(c.admitted?"admitted structural cell":"fail-closed runtime theatre")],["cstate",c.admitted?"ALLOW · STRUCTURAL":"BLOCKED"]]){const s=document.createElement("span");s.className=klass;s.textContent=text;b.append(s)}b.addEventListener("click",async()=>{b.disabled=true;try{const [compile,act]=await Promise.all([get("/api/compile",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cell:c.id,signal:"public factory inspection"})}),get("/api/act",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cell:c.id})})]);show({compile,act});out.scrollIntoView({behavior:"smooth",block:"center"})}catch(e){show({ok:false,decision:"BLOCKED",error:String(e)})}finally{b.disabled=false}});return b}
+async function boot(){const [factory,cells]=await Promise.all([get("/api/distribution"),get("/api/cells")]);S.profiles=factory.profiles;select.replaceChildren();for(const p of S.profiles){const o=document.createElement("option");o.value=p.id;o.textContent=`${p.id} · ${p.target_spec.accelerator}`;select.append(o)}meta();$("components").textContent=String(factory.summary.components);$("profiles").textContent=String(factory.profiles.length);$("accelerators").textContent=String(factory.summary.accelerators.length);$("cellGrid").replaceChildren(...cells.map(card));$("topState").textContent="factory live";show({ok:true,state:factory.state,summary:factory.summary,profiles:factory.profiles.map(p=>({id:p.id,target:p.target,decision:p.decision,warnings:p.warnings,lock_digest:p.lock_digest,runtime_certified:p.runtime_certified})),note:"Select a profile and generate its deterministic proof bundle."})}
+select.addEventListener("change",meta);
+$("compile").addEventListener("click",async e=>{const b=e.currentTarget;b.disabled=true;b.textContent="Compiling…";try{show(await get("/api/distribution/resolve",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({profile:select.value})}));out.scrollIntoView({behavior:"smooth",block:"center"})}catch(err){show({ok:false,decision:"BLOCKED",error:String(err)})}finally{b.disabled=false;b.textContent="Generate bundle"}});
+$("catalog").addEventListener("click",async()=>{try{show(await get("/api/distribution/catalog"));out.scrollIntoView({behavior:"smooth",block:"center"})}catch(e){show({ok:false,decision:"BLOCKED",error:String(e)})}});
+async function search(){try{show(await get(`/api/search?q=${encodeURIComponent($("query").value)}`));out.scrollIntoView({behavior:"smooth",block:"center"})}catch(e){show({ok:false,decision:"BLOCKED",error:String(e)})}}
+$("search").addEventListener("click",search);$("query").addEventListener("keydown",e=>{if(e.key==="Enter")search()});$("copy").addEventListener("click",async e=>{const b=e.currentTarget;try{await navigator.clipboard.writeText(out.textContent);b.textContent="Copied"}catch{b.textContent="Copy failed"}setTimeout(()=>b.textContent="Copy JSON",1400)});boot().catch(e=>{$("topState").textContent="fail closed";show({ok:false,decision:"BLOCKED",error:String(e)})});
+</script>
 </body>
 </html>
