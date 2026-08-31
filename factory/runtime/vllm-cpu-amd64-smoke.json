@@ -5,7 +5,7 @@
   "distribution_profile": "vllm-cpu-amd64",
   "runtime_component": "vllm-cpu-amd64",
   "torch_component": "pytorch-cpu-amd64",
-  "expected_vllm_version": "0.28.0",
+  "expected_vllm_version": "0.28.0+cpu",
   "expected_torch_version": "2.13.0+cpu",
   "model": {
     "id": "HuggingFaceTB/SmolLM2-135M-Instruct",
