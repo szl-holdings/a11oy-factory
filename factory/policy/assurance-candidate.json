@@ -1,0 +1,19 @@
+{
+  "schema": "a11oy.factory.assurance-policy/v1",
+  "id": "candidate-v1",
+  "channel": "candidate",
+  "block_severities": [
+    "CRITICAL"
+  ],
+  "block_unknown_severity": false,
+  "minimum_license_status": "EVIDENCE_ONLY",
+  "require_osv_complete": true,
+  "require_runtime_execution": true,
+  "require_production_runtime_certification": false,
+  "require_cryptographic_signature": false,
+  "require_download_hashes": true,
+  "notes": [
+    "Candidate requires current vulnerability evidence, at least license-file evidence, exact download hashes, and scoped execution; critical matches block admission.",
+    "Candidate does not require a production signature and does not imply production certification."
+  ]
+}
