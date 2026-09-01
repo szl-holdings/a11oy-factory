@@ -311,7 +311,8 @@ def execute(spec_path: Path, materialization_path: Path, output_path: Path) -> d
         max_num_seqs=1,
         max_num_batched_tokens=int(inference["max_model_len"]),
         generation_config="vllm",
-        device="cpu",
+        # Device selection comes from VLLM_TARGET_DEVICE=cpu (set above before
+        # the vLLM import); the pinned vLLM removed the LLM(device=...) kwarg.
     )
     engine_ready_elapsed = time.perf_counter() - engine_started
     _event("engine_initialized", elapsed_seconds=round(engine_ready_elapsed, 6))
