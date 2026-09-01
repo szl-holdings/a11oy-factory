@@ -7,12 +7,16 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Mapping
 
 from a11oy_factory.assurance import AssuranceError, digest_json, verify_verdict
 from a11oy_factory.signed_promotion import SIGNING_SUBJECT_SCHEMA, verify_embedded_digest
+
+LOCK_SCHEMA = "a11oy.factory.lock/v1"
+_SHA256_ID = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 def _read(path: Path) -> dict[str, Any]:
@@ -34,6 +38,52 @@ def _require_embedded(value: Mapping[str, Any], label: str) -> str:
     if not verify_embedded_digest(value):
         raise AssuranceError("INVALID_EVIDENCE_DIGEST", f"{label} proof digest does not verify")
     return str(value["proof_sha256"])
+
+
+def _distribution_lock_identity(lock: Mapping[str, Any]) -> str:
+    """Return the canonical v1 lock identity after verifying both bindings.
+
+    ``resolve_distribution`` computes ``lock_digest`` over the lock body before
+    adding ``lock_digest`` and the receipt. The receipt then binds the same
+    unprefixed digest as its subject. Signing must consume that declared
+    identity rather than guessing legacy top-level ``id`` fields that are not
+    part of ``a11oy.factory.lock/v1``.
+    """
+    if lock.get("schema") != LOCK_SCHEMA:
+        raise AssuranceError(
+            "INVALID_DISTRIBUTION_LOCK_SCHEMA",
+            f"Distribution lock schema must equal {LOCK_SCHEMA}",
+        )
+
+    lock_digest = lock.get("lock_digest")
+    if not isinstance(lock_digest, str) or _SHA256_ID.fullmatch(lock_digest) is None:
+        raise AssuranceError(
+            "LOCK_DIGEST_MISSING",
+            "Distribution lock must declare lock_digest as sha256:<64 lowercase hex>",
+        )
+
+    lock_body = {
+        key: deepcopy(value)
+        for key, value in lock.items()
+        if key not in {"lock_digest", "receipt"}
+    }
+    expected = f"sha256:{digest_json(lock_body)}"
+    if lock_digest != expected:
+        raise AssuranceError(
+            "LOCK_DIGEST_MISMATCH",
+            "Distribution lock_digest does not match the canonical lock body",
+        )
+
+    receipt = lock.get("receipt")
+    subject = receipt.get("subject") if isinstance(receipt, Mapping) else None
+    digest_block = subject.get("digest") if isinstance(subject, Mapping) else None
+    receipt_digest = digest_block.get("sha256") if isinstance(digest_block, Mapping) else None
+    if receipt_digest != lock_digest.removeprefix("sha256:"):
+        raise AssuranceError(
+            "LOCK_RECEIPT_BINDING_MISMATCH",
+            "Distribution lock receipt does not bind the canonical lock_digest",
+        )
+    return lock_digest
 
 
 def _parse_args() -> argparse.Namespace:
@@ -67,9 +117,7 @@ def main() -> int:
         raise AssuranceError("ALREADY_SIGNED", "Initial stable verdict must still be unsigned")
     if policy.get("id") != stable.get("policy_id") or policy.get("channel") != "stable":
         raise AssuranceError("POLICY_BINDING_MISMATCH", "Stable policy does not match the verdict")
-    lock_id = lock.get("lock_id") or lock.get("digest") or lock.get("id")
-    if not lock_id:
-        raise AssuranceError("LOCK_ID_MISSING", "Distribution lock has no content identity")
+    lock_id = _distribution_lock_identity(lock)
 
     repository = os.environ.get("GITHUB_REPOSITORY", "szl-holdings/a11oy-factory")
     commit_sha = os.environ.get("GITHUB_SHA", "0" * 40)
