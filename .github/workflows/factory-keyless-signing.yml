@@ -126,7 +126,7 @@ jobs:
         run: |
           set -euo pipefail
           SCAN="$(find dist/signing/source -type f -name python-environment-scan.json -print -quit)"
-          RUNTIME_PROOF="$(find dist/signing/source -type f -name runtime-proof.json -print -quit)"
+          RUNTIME_PROOF="$(find dist/signing/source -type f -name runtime-execution.json -print -quit)"
           DISTRIBUTION_LOCK="$(find dist/signing/source -type f -name factory.lock.json -print -quit)"
           INITIAL_STABLE_VERDICT="$(find dist/signing/source -type f -name stable-verdict.json -print -quit)"
           test -n "$SCAN" && test -f "$SCAN"
@@ -154,6 +154,7 @@ jobs:
           assert verify_embedded_digest(runtime)
           assert verify_verdict(stable)
           assert scan["osv"]["complete"] is True
+          assert runtime["schema"] == "a11oy.factory.runtime-execution/v1"
           assert runtime["runtime_execution_verified"] is True
           assert runtime["production_runtime_certified"] is False
           assert stable["channel"] == "stable"
@@ -268,10 +269,11 @@ jobs:
             --output dist/signing/output/signed-stable-verdict.json
           python - <<'PY'
           import json
+          import os
           from pathlib import Path
           from a11oy_factory.signed_promotion import verify_signed_promotion
 
-          initial = json.loads(Path("${INITIAL_STABLE_VERDICT}").read_text(encoding="utf-8"))
+          initial = json.loads(Path(os.environ["INITIAL_STABLE_VERDICT"]).read_text(encoding="utf-8"))
           signed = json.loads(Path("dist/signing/output/signed-stable-verdict.json").read_text(encoding="utf-8"))
           assert verify_signed_promotion(signed)
           assert signed["signer"] == "SIGSTORE-keyless"
