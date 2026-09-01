@@ -36,6 +36,16 @@ def _require_embedded(value: Mapping[str, Any], label: str) -> str:
     return str(value["proof_sha256"])
 
 
+def _distribution_lock_identity(lock: Mapping[str, Any]) -> str:
+    """Return the canonical content identity emitted by supported lock schemas."""
+
+    for field in ("lock_id", "lock_digest", "digest", "id"):
+        value = lock.get(field)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    raise AssuranceError("LOCK_ID_MISSING", "Distribution lock has no content identity")
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scan", type=Path, required=True)
@@ -67,9 +77,7 @@ def main() -> int:
         raise AssuranceError("ALREADY_SIGNED", "Initial stable verdict must still be unsigned")
     if policy.get("id") != stable.get("policy_id") or policy.get("channel") != "stable":
         raise AssuranceError("POLICY_BINDING_MISMATCH", "Stable policy does not match the verdict")
-    lock_id = lock.get("lock_id") or lock.get("digest") or lock.get("id")
-    if not lock_id:
-        raise AssuranceError("LOCK_ID_MISSING", "Distribution lock has no content identity")
+    lock_id = _distribution_lock_identity(lock)
 
     repository = os.environ.get("GITHUB_REPOSITORY", "szl-holdings/a11oy-factory")
     commit_sha = os.environ.get("GITHUB_SHA", "0" * 40)
