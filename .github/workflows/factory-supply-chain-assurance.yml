@@ -185,9 +185,9 @@ jobs:
           mkdir -p dist/assurance/runtime
           gh run download "$RUN_ID" \
             --repo "$GITHUB_REPOSITORY" \
-            --name a11oy-vllm-cpu-amd64-runtime-proof \
+            --name a11oy-vllm-cpu-runtime-execution \
             --dir dist/assurance/runtime
-          RUNTIME_PROOF="$(find dist/assurance/runtime -type f -name runtime-proof.json -print -quit)"
+          RUNTIME_PROOF="$(find dist/assurance/runtime -type f -name runtime-execution.json -print -quit)"
           test -n "$RUNTIME_PROOF"
           echo "RUNTIME_PROOF=$RUNTIME_PROOF" >> "$GITHUB_ENV"
           echo "$RUN_ID" > dist/assurance/runtime-workflow-run-id.txt
@@ -256,7 +256,7 @@ jobs:
         run: |
           rm -rf dist/assurance/wheels
           rm -rf "${RUNNER_TEMP}/factory-assurance-venv"
-          find dist/assurance/runtime -type f ! -name runtime-proof.json -delete 2>/dev/null || true
+          find dist/assurance/runtime -type f ! -name runtime-execution.json -delete 2>/dev/null || true
 
       - name: Upload assurance evidence
         if: always()
@@ -269,7 +269,7 @@ jobs:
             dist/assurance/materialization.json
             dist/assurance/constraints.txt
             dist/assurance/runtime-workflow-run-id.txt
-            dist/assurance/runtime/runtime-proof.json
+            dist/assurance/runtime/runtime-execution.json
             dist/assurance/verdicts/*.json
             dist/assurance/distribution/factory.lock.json
             dist/assurance/distribution/factory.spdx.json

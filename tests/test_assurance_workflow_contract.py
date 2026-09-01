@@ -8,6 +8,9 @@ class AssuranceWorkflowContractTests(unittest.TestCase):
         workflow = (
             root / ".github/workflows/factory-supply-chain-assurance.yml"
         ).read_text(encoding="utf-8")
+        runtime_workflow = (
+            root / ".github/workflows/vllm-cpu-runtime-execution.yml"
+        ).read_text(encoding="utf-8")
         self.assertIn("name: factory-supply-chain-assurance", workflow)
         self.assertIn('cron: "23 6 * * 1"', workflow)
         self.assertIn("permissions:", workflow)
@@ -17,7 +20,11 @@ class AssuranceWorkflowContractTests(unittest.TestCase):
             root / "a11oy_factory/assurance.py"
         ).read_text(encoding="utf-8"))
         self.assertIn("vllm-cpu-runtime-execution.yml/runs", workflow)
-        self.assertIn("a11oy-vllm-cpu-amd64-runtime-proof", workflow)
+        self.assertIn("name: a11oy-vllm-cpu-runtime-execution", runtime_workflow)
+        self.assertIn("dist/runtime/runtime-execution.json", runtime_workflow)
+        self.assertIn("--name a11oy-vllm-cpu-runtime-execution", workflow)
+        self.assertIn("-name runtime-execution.json", workflow)
+        self.assertIn("dist/assurance/runtime/runtime-execution.json", workflow)
         self.assertIn("CRYPTOGRAPHIC_SIGNATURE_REQUIRED", workflow)
         self.assertIn("a11oy-factory-supply-chain-assurance", workflow)
 
