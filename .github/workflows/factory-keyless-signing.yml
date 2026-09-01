@@ -40,6 +40,7 @@ concurrency:
 env:
   PYTHONUNBUFFERED: "1"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PYTHONPATH: ${{ github.workspace }}
   COSIGN_VERSION: "v2.4.1"
   SIGSTORE_OIDC_ISSUER: "https://token.actions.githubusercontent.com"
   SIGSTORE_CERTIFICATE_IDENTITY: "https://github.com/szl-holdings/a11oy-factory/.github/workflows/factory-keyless-signing.yml@refs/heads/main"
