@@ -34,6 +34,9 @@ class KeylessSigningWorkflowContractTests(unittest.TestCase):
         )
         self.assertNotIn('Path("${INITIAL_STABLE_VERDICT}")', self.signing)
 
+    def test_direct_script_invocations_can_import_repository_package(self) -> None:
+        self.assertIn("PYTHONPATH: ${{ github.workspace }}", self.signing)
+
     def test_workflow_watches_this_contract_test(self) -> None:
         watched_path = '"tests/test_keyless_signing_workflow_contract.py"'
         self.assertGreaterEqual(self.signing.count(watched_path), 2)
