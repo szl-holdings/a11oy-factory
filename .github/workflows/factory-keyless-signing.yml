@@ -137,6 +137,9 @@ jobs:
           echo "RUNTIME_PROOF=$RUNTIME_PROOF" >> "$GITHUB_ENV"
           echo "DISTRIBUTION_LOCK=$DISTRIBUTION_LOCK" >> "$GITHUB_ENV"
           echo "INITIAL_STABLE_VERDICT=$INITIAL_STABLE_VERDICT" >> "$GITHUB_ENV"
+          # $GITHUB_ENV only propagates to LATER steps; Python in THIS step
+          # cannot see it. Export directly so the heredoc below sees the vars.
+          export SCAN RUNTIME_PROOF DISTRIBUTION_LOCK INITIAL_STABLE_VERDICT
           python - <<'PY'
           import json
           import os
