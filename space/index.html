@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-szl-holo-space-v2="a11oy-factory">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -13,6 +13,7 @@
     @media(max-width:580px){.wrap{width:min(100% - 22px,1160px)}.topin{min-height:61px}.brand span:last-child{display:none}.hero{padding-top:54px}.metrics,.proofgrid,.cells{grid-template-columns:1fr}.metric{min-height:auto}.head{display:block}.head p{margin-top:10px}.toolbar{grid-template-columns:1fr}.actions .btn{width:100%}.meta div{display:block}.meta strong{display:block;margin-top:3px;text-align:left}.status{font-size:9px}}
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
   </style>
+  <link rel="stylesheet" href="./szl-holo-v2.css" data-szl-holo-space-asset="style-v2" />
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -40,5 +41,6 @@ $("catalog").addEventListener("click",async()=>{try{show(await get("/api/distrib
 async function search(){try{show(await get(`/api/search?q=${encodeURIComponent($("query").value)}`));out.scrollIntoView({behavior:"smooth",block:"center"})}catch(e){show({ok:false,decision:"BLOCKED",error:String(e)})}}
 $("search").addEventListener("click",search);$("query").addEventListener("keydown",e=>{if(e.key==="Enter")search()});$("copy").addEventListener("click",async e=>{const b=e.currentTarget;try{await navigator.clipboard.writeText(out.textContent);b.textContent="Copied"}catch{b.textContent="Copy failed"}setTimeout(()=>b.textContent="Copy JSON",1400)});boot().catch(e=>{$("topState").textContent="fail closed";show({ok:false,decision:"BLOCKED",error:String(e)})});
 </script>
+  <script src="./szl-holo-v2.js" defer data-szl-holo-space-asset="script-v2"></script>
 </body>
 </html>
