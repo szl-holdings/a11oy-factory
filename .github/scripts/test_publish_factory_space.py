@@ -25,6 +25,27 @@ SOURCE_SHA = "a" * 40
 REPOSITORY_ROOT = MODULE_PATH.parents[2]
 
 
+def run_git(root: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    return result.stdout.strip()
+
+
+def initialize_repository(root: Path) -> None:
+    run_git(root, "init", "--quiet")
+    run_git(root, "config", "user.name", "Factory Publisher Test")
+    run_git(root, "config", "user.email", "factory-publisher@example.invalid")
+    (root / "tracked.txt").write_text("authorized\n", encoding="utf-8")
+    run_git(root, "add", "tracked.txt")
+    run_git(root, "commit", "--quiet", "--no-gpg-sign", "-m", "authorized source")
+
+
 class FakeApi:
     def __init__(
         self,
@@ -209,10 +230,62 @@ class PublisherTests(unittest.TestCase):
         self.assertEqual(payload["provider_mutation"], "NOT_ATTEMPTED")
         self.assertNotIn("constructor detail", json.dumps(payload))
 
+    def test_modified_tracked_file_blocks_upload_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            initialize_repository(root)
+            publisher.write_source_provenance(root, SOURCE_SHA)
+            (root / "tracked.txt").write_text("dirty\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(publisher.PublicationBlocked, "authorized Git tree"):
+                publisher.prove_upload_workspace_clean(root)
+
+    def test_staged_file_blocks_upload_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            initialize_repository(root)
+            publisher.write_source_provenance(root, SOURCE_SHA)
+            (root / "staged.txt").write_text("staged\n", encoding="utf-8")
+            run_git(root, "add", "staged.txt")
+
+            with self.assertRaisesRegex(publisher.PublicationBlocked, "authorized Git tree"):
+                publisher.prove_upload_workspace_clean(root)
+
+    def test_untracked_file_blocks_upload_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            initialize_repository(root)
+            publisher.write_source_provenance(root, SOURCE_SHA)
+            (root / "untracked.txt").write_text("untracked\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(publisher.PublicationBlocked, "authorized Git tree"):
+                publisher.prove_upload_workspace_clean(root)
+
+    def test_generated_provenance_is_the_only_allowed_workspace_change(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            initialize_repository(root)
+            provenance = publisher.write_source_provenance(root, SOURCE_SHA)
+
+            publisher.prove_upload_workspace_clean(root)
+            payload = json.loads(provenance.read_text(encoding="utf-8"))
+
+        self.assertEqual(payload["github_source_sha"], SOURCE_SHA)
+
+    def test_validated_provider_revision_is_written_to_github_output(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "github-output.txt"
+            with patch.dict(os.environ, {"GITHUB_OUTPUT": str(output)}, clear=False):
+                publisher.write_uploaded_revision_output("b" * 40)
+
+            self.assertEqual(output.read_text(encoding="utf-8"), f"uploaded_revision={'b' * 40}\n")
+
     def test_source_binding_requires_head_and_exact_current_main(self) -> None:
         def matching_git(_root: Path, *args: str) -> str:
             if args[:2] == ("rev-parse", "HEAD"):
                 return SOURCE_SHA
+            if args and args[0] == "status":
+                return f"?? {publisher.PROVENANCE_RELATIVE_PATH.as_posix()}"
             return f"{SOURCE_SHA}\trefs/heads/main"
 
         publisher.prove_source_binding(Path("."), SOURCE_SHA, git=matching_git)
@@ -220,6 +293,8 @@ class PublisherTests(unittest.TestCase):
         def stale_git(_root: Path, *args: str) -> str:
             if args[:2] == ("rev-parse", "HEAD"):
                 return SOURCE_SHA
+            if args and args[0] == "status":
+                return f"?? {publisher.PROVENANCE_RELATIVE_PATH.as_posix()}"
             return f"{'c' * 40}\trefs/heads/main"
 
         with self.assertRaisesRegex(publisher.PublicationBlocked, "current origin/main"):

@@ -18,9 +18,11 @@ from typing import Any
 from huggingface_hub import HfApi
 
 REPO_ID = "SZLHOLDINGS/a11oy-factory"
+SPACE_ORIGIN = "https://szlholdings-a11oy-factory.hf.space"
 GITHUB_REPOSITORY = "szl-holdings/a11oy-factory"
 SOURCE_PROVENANCE_SCHEMA = "a11oy.factory.source-provenance/v1"
 SOURCE_SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
+PROVIDER_SHA_PATTERN = re.compile(r"^[0-9a-f]{40,64}$")
 EXPECTED_VERSION = "0.6.0"
 EXPECTED_PROFILE_IDS = {
     "vllm-cpu-amd64",
@@ -63,18 +65,37 @@ def _as_url(info: Any) -> str:
     return host.rstrip("/")
 
 
-def _get_json(base_url: str, path: str, *, timeout: float = 15.0) -> dict[str, Any]:
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise RuntimeError("Space verification endpoint redirected; request blocked.")
+
+
+def _get_json(
+    base_url: str,
+    path: str,
+    *,
+    token: str | None = None,
+    timeout: float = 15.0,
+) -> dict[str, Any]:
+    if base_url.rstrip("/") != SPACE_ORIGIN:
+        raise TerminalSpaceError("Space origin is not the configured deployment target.")
+    if path not in {"/healthz", "/api/distribution"}:
+        raise TerminalSpaceError("Unexpected verification endpoint.")
     separator = "&" if "?" in path else "?"
     url = f"{base_url}{path}{separator}proof={time.time_ns()}"
+    headers = {
+        "Accept": "application/json",
+        "Cache-Control": "no-cache",
+        "User-Agent": "a11oy-factory-deployment-verifier/0.6.0",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     request = urllib.request.Request(
         url,
-        headers={
-            "Accept": "application/json",
-            "Cache-Control": "no-cache",
-            "User-Agent": "a11oy-factory-deployment-verifier/0.6.0",
-        },
+        headers=headers,
     )
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    opener = urllib.request.build_opener(_NoRedirect())
+    with opener.open(request, timeout=timeout) as response:
         content_type = response.headers.get("Content-Type", "")
         if response.status != 200:
             raise RuntimeError(f"{path} returned HTTP {response.status}.")
@@ -163,6 +184,13 @@ def _current_main_sha() -> str:
     if result.returncode != 0 or len(fields) != 2 or fields[1] != "refs/heads/main":
         raise RuntimeError("could not prove current origin/main")
     return fields[0]
+
+
+def _assert_provider_revision(info: Any, expected_revision: str) -> None:
+    if not PROVIDER_SHA_PATTERN.fullmatch(expected_revision):
+        raise TerminalSpaceError("Expected provider revision is missing or invalid.")
+    if _scalar(getattr(info, "sha", None)) != expected_revision:
+        raise TerminalSpaceError("Space revision does not match this publication.")
 
 
 def _write_evidence(payload: dict[str, Any]) -> Path:
@@ -264,6 +292,14 @@ def main() -> int:
             {},
         )
 
+    expected_provider_sha = os.environ.get("FACTORY_PROVIDER_SHA", "").strip()
+    if not PROVIDER_SHA_PATTERN.fullmatch(expected_provider_sha):
+        return _record_failure(
+            "FACTORY_PROVIDER_SHA is missing or invalid.",
+            {},
+            expected_source_sha,
+        )
+
     timeout_seconds = int(os.environ.get("HF_VERIFY_TIMEOUT", "900"))
     poll_seconds = max(2, int(os.environ.get("HF_VERIFY_POLL", "8")))
     initial_delay = max(0, int(os.environ.get("HF_VERIFY_INITIAL_DELAY", "12")))
@@ -279,6 +315,7 @@ def main() -> int:
         try:
             runtime = api.get_space_runtime(REPO_ID)
             info = api.space_info(REPO_ID)
+            _assert_provider_revision(info, expected_provider_sha)
             runtime_data = _runtime_payload(runtime)
             host = _as_url(info)
             last_observation = {
@@ -295,8 +332,8 @@ def main() -> int:
                 raise TerminalSpaceError(f"Space reached terminal failure stage {stage}.")
             if stage in ENDPOINT_STAGES:
                 try:
-                    health = _get_json(host, "/healthz")
-                    distribution = _get_json(host, "/api/distribution")
+                    health = _get_json(host, "/healthz", token=token)
+                    distribution = _get_json(host, "/api/distribution", token=token)
                     _assert_contract(
                         health,
                         distribution,
@@ -313,6 +350,10 @@ def main() -> int:
                             },
                             expected_source_sha,
                         )
+                    # Recheck after endpoint probes so a concurrent Hub write
+                    # during verification cannot be included in this receipt.
+                    info = api.space_info(REPO_ID)
+                    _assert_provider_revision(info, expected_provider_sha)
                     profiles = distribution["profiles"]
                     evidence = {
                         "schema": "a11oy.factory.deployment-verification/v1",
@@ -320,6 +361,7 @@ def main() -> int:
                         "repo_id": REPO_ID,
                         "host": host,
                         "space_sha": _scalar(getattr(info, "sha", None)),
+                        "expected_space_sha": expected_provider_sha,
                         "github_source_sha": expected_source_sha,
                         "source_provenance": health["source_provenance"],
                         "runtime": runtime_data,
@@ -345,6 +387,8 @@ def main() -> int:
                     print(json.dumps(evidence, indent=2, sort_keys=True), flush=True)
                     print(f"deployment proof written to {output}", flush=True)
                     return 0
+                except TerminalSpaceError:
+                    raise
                 except (OSError, ValueError, RuntimeError, urllib.error.URLError) as exc:
                     last_observation["endpoint_error"] = _sanitize_text(exc)
                     print(

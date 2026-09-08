@@ -105,6 +105,27 @@ def prove_source_binding(
     fields = remote_line.split()
     if len(fields) != 2 or fields[1] != "refs/heads/main" or fields[0] != source_sha:
         raise PublicationBlocked("FACTORY_SOURCE_SHA is not the exact current origin/main")
+    prove_upload_workspace_clean(root, git=git)
+
+
+def prove_upload_workspace_clean(
+    root: Path,
+    *,
+    git: Callable[..., str] = _git,
+) -> None:
+    status = git(
+        root,
+        "status",
+        "--porcelain=v1",
+        "--untracked-files=all",
+        "--ignore-submodules=none",
+    )
+    entries = [line for line in status.splitlines() if line]
+    expected = f"?? {PROVENANCE_RELATIVE_PATH.as_posix()}"
+    if entries != [expected]:
+        raise PublicationBlocked(
+            "upload workspace is not the authorized Git tree plus generated provenance"
+        )
 
 
 def write_source_provenance(root: Path, source_sha: str) -> Path:
@@ -175,6 +196,23 @@ def provider_revision(result: Any) -> str:
     return revision
 
 
+def write_uploaded_revision_output(revision: str) -> None:
+    if not PROVIDER_SHA_PATTERN.fullmatch(revision):
+        raise ProviderMutationUnproven(
+            "unvalidated provider revision cannot be exported to the workflow"
+        )
+    output = os.environ.get("GITHUB_OUTPUT")
+    if not output:
+        return
+    try:
+        with Path(output).open("a", encoding="utf-8", newline="\n") as handle:
+            handle.write(f"uploaded_revision={revision}\n")
+    except OSError:
+        raise ProviderMutationUnproven(
+            "validated provider revision could not be exported to the workflow"
+        ) from None
+
+
 def main() -> int:
     root = Path(os.environ.get("GITHUB_WORKSPACE") or ".").resolve()
     source_sha = os.environ.get("FACTORY_SOURCE_SHA", "").strip()
@@ -206,6 +244,7 @@ def main() -> int:
         api = HfApi(token=token)
         result = publish_existing_space(api, root, source_sha)
         uploaded_revision = provider_revision(result)
+        write_uploaded_revision_output(uploaded_revision)
     except ProviderMutationUnproven as exc:
         output = write_blocked_receipt(
             root,

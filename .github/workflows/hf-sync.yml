@@ -85,9 +85,12 @@ jobs:
           "huggingface_hub==1.23.0"
 
       - name: Publish factory Space
+        id: publish
         run: python .github/scripts/publish_factory_space.py
 
       - name: Prove deployed runtime and public API contract
+        env:
+          FACTORY_PROVIDER_SHA: ${{ steps.publish.outputs.uploaded_revision }}
         run: python .github/scripts/verify_factory_space.py
 
       - name: Upload deployment proof

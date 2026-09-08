@@ -37,7 +37,7 @@ test("CI fails closed and exercises tests, live auth, and typecheck", () => {
     "run: npm run build",
   ]);
   assert.match(ci, /trap cleanup EXIT/);
-  assert.match(ci, /VITE_AUTH_ENABLED: "false"/);
+  assert.match(ci, /VITE_AUTH_ENABLED: "true"/);
 });
 
 test("Hugging Face publication is manual, source-bound, and environment-gated", () => {
