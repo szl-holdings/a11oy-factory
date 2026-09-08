@@ -1,9 +1,13 @@
 import importlib.util
+import json
+import os
 import sys
+import tempfile
 import types
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 
 class _FakeHfApi:
@@ -29,6 +33,12 @@ class RuntimeVerifierTests(unittest.TestCase):
             "factory_core": {
                 "state": "LIVE",
                 "runtime_certified": False,
+            },
+            "source_provenance": {
+                "schema": verifier.SOURCE_PROVENANCE_SCHEMA,
+                "state": "BOUND",
+                "github_repository": verifier.GITHUB_REPOSITORY,
+                "github_source_sha": "a" * 40,
             },
         }
         profiles = [
@@ -80,7 +90,20 @@ class RuntimeVerifierTests(unittest.TestCase):
 
     def test_live_contract_is_accepted(self):
         health, distribution = self.valid_contract()
-        verifier._assert_contract(health, distribution)
+        verifier._assert_contract(
+            health,
+            distribution,
+            expected_source_sha="a" * 40,
+        )
+
+    def test_runtime_source_must_match_authorized_git_sha(self):
+        health, distribution = self.valid_contract()
+        with self.assertRaisesRegex(RuntimeError, "source SHA"):
+            verifier._assert_contract(
+                health,
+                distribution,
+                expected_source_sha="b" * 40,
+            )
 
     def test_wrong_profile_set_is_rejected(self):
         health, distribution = self.valid_contract()
@@ -100,6 +123,28 @@ class RuntimeVerifierTests(unittest.TestCase):
         self.assertIn("NO_APP_FILE", verifier.TERMINAL_FAILURE_STAGES)
         self.assertIn("RUNNING", verifier.ENDPOINT_STAGES)
         self.assertIn("SLEEPING", verifier.ENDPOINT_STAGES)
+
+    def test_blocked_verification_writes_a_sanitized_receipt(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "deployment.json"
+            with patch.dict(
+                os.environ,
+                {"HF_VERIFY_OUTPUT": str(output)},
+                clear=False,
+            ):
+                result = verifier._record_failure(
+                    "runtime failed?token=super-secret",
+                    {"endpoint_error": "https://example.invalid/?access_token=super-secret"},
+                    "a" * 40,
+                )
+
+            payload = json.loads(output.read_text(encoding="utf-8"))
+
+        self.assertEqual(result, 1)
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["decision"], "BLOCKED")
+        self.assertEqual(payload["github_source_sha"], "a" * 40)
+        self.assertNotIn("super-secret", json.dumps(payload))
 
 
 if __name__ == "__main__":

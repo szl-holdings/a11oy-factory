@@ -2,30 +2,77 @@ name: Sync Hugging Face Space
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
+    inputs:
+      source_sha:
+        description: Exact 40-character Git commit on current main to publish
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
   group: a11oy-factory-hf-deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment:
+      name: hugging-face-production
+      url: https://huggingface.co/spaces/SZLHOLDINGS/a11oy-factory
     env:
-      HF_TOKEN: ${{ secrets.HF_ORG_TOKEN || secrets.HF_TOKEN }}
+      HF_TOKEN: ${{ secrets.HF_FACTORY_PRODUCTION_TOKEN }}
+      FACTORY_SOURCE_SHA: ${{ inputs.source_sha }}
       HF_VERIFY_TIMEOUT: "900"
       HF_VERIFY_POLL: "8"
     steps:
+      - name: Validate requested source SHA shape
+        shell: bash
+        env:
+          REQUESTED_SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$REQUESTED_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "source_sha must be an exact lowercase 40-character Git SHA." >&2
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 1
+          fetch-depth: 0
+          ref: ${{ inputs.source_sha }}
+
+      - name: Prove exact source is current main
+        shell: bash
+        env:
+          REQUESTED_SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          checked_out_sha="$(git rev-parse HEAD)"
+          if [[ "$checked_out_sha" != "$REQUESTED_SOURCE_SHA" ]]; then
+            echo "Checkout mismatch: expected $REQUESTED_SOURCE_SHA, got $checked_out_sha." >&2
+            exit 1
+          fi
+
+          git fetch --no-tags --depth=1 origin \
+            +refs/heads/main:refs/remotes/origin/main
+          current_main_sha="$(git rev-parse refs/remotes/origin/main)"
+          if [[ "$current_main_sha" != "$REQUESTED_SOURCE_SHA" ]]; then
+            echo "Publication blocked: source_sha is not the current main commit." >&2
+            echo "requested=$REQUESTED_SOURCE_SHA current_main=$current_main_sha" >&2
+            exit 1
+          fi
+
+          {
+            echo "## Authorized Hugging Face publication"
+            echo
+            echo "- Source SHA: \`$checked_out_sha\`"
+            echo "- Authorization boundary: \`hugging-face-production\` environment"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -44,6 +91,7 @@ jobs:
         run: python .github/scripts/verify_factory_space.py
 
       - name: Upload deployment proof
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: a11oy-factory-hf-deployment-proof
