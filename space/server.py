@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -33,6 +34,9 @@ HTML = HERE / "index.html"
 FACTORY_ROOT = APP_ROOT / "factory"
 CATALOG_PATH = FACTORY_ROOT / "catalog.json"
 PROFILE_ROOT = FACTORY_ROOT / "profiles"
+SOURCE_PROVENANCE_PATH = FACTORY_ROOT / "source-provenance.json"
+SOURCE_PROVENANCE_SCHEMA = "a11oy.factory.source-provenance/v1"
+SOURCE_SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 MAX_BODY_BYTES = 2 * 1024 * 1024
 
 try:
@@ -74,6 +78,28 @@ def _profile(profile_id: str) -> dict[str, Any]:
             details={"profiles": sorted(_profile_paths())},
         )
     return read_json(path)
+
+
+def _source_provenance() -> dict[str, Any]:
+    try:
+        value = read_json(SOURCE_PROVENANCE_PATH)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return {"schema": SOURCE_PROVENANCE_SCHEMA, "state": "UNAVAILABLE"}
+    source_sha = value.get("github_source_sha")
+    repository = value.get("github_repository")
+    if (
+        value.get("schema") != SOURCE_PROVENANCE_SCHEMA
+        or repository != "szl-holdings/a11oy-factory"
+        or not isinstance(source_sha, str)
+        or not SOURCE_SHA_PATTERN.fullmatch(source_sha)
+    ):
+        return {"schema": SOURCE_PROVENANCE_SCHEMA, "state": "INVALID"}
+    return {
+        "schema": SOURCE_PROVENANCE_SCHEMA,
+        "state": "BOUND",
+        "github_repository": repository,
+        "github_source_sha": source_sha,
+    }
 
 
 def _profile_summaries(catalog: dict[str, Any]) -> list[dict[str, Any]]:
@@ -228,6 +254,7 @@ class Handler(BaseHTTPRequestHandler):
                             "profiles": len(profiles),
                             "runtime_certified": False,
                         },
+                        "source_provenance": _source_provenance(),
                         "decision_cells": {
                             "admitted": ["lyte"],
                             "roadmap": "STARTED",

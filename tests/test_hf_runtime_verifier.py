@@ -1,9 +1,14 @@
 import importlib.util
+import io
+import json
+import os
 import sys
+import tempfile
 import types
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 
 class _FakeHfApi:
@@ -29,6 +34,12 @@ class RuntimeVerifierTests(unittest.TestCase):
             "factory_core": {
                 "state": "LIVE",
                 "runtime_certified": False,
+            },
+            "source_provenance": {
+                "schema": verifier.SOURCE_PROVENANCE_SCHEMA,
+                "state": "BOUND",
+                "github_repository": verifier.GITHUB_REPOSITORY,
+                "github_source_sha": "a" * 40,
             },
         }
         profiles = [
@@ -80,7 +91,76 @@ class RuntimeVerifierTests(unittest.TestCase):
 
     def test_live_contract_is_accepted(self):
         health, distribution = self.valid_contract()
-        verifier._assert_contract(health, distribution)
+        verifier._assert_contract(
+            health,
+            distribution,
+            expected_source_sha="a" * 40,
+        )
+
+    def test_runtime_source_must_match_authorized_git_sha(self):
+        health, distribution = self.valid_contract()
+        with self.assertRaisesRegex(RuntimeError, "source SHA"):
+            verifier._assert_contract(
+                health,
+                distribution,
+                expected_source_sha="b" * 40,
+            )
+
+    def test_provider_revision_must_match_this_upload(self):
+        verifier._assert_provider_revision(SimpleNamespace(sha="b" * 40), "b" * 40)
+        for observed, expected in (("c" * 40, "b" * 40), (None, "b" * 40), ("b" * 40, "")):
+            with self.subTest(observed=observed, expected=expected):
+                with self.assertRaises(verifier.TerminalSpaceError):
+                    verifier._assert_provider_revision(SimpleNamespace(sha=observed), expected)
+
+    def test_provider_write_during_endpoint_probes_blocks_receipt(self):
+        health, distribution = self.valid_contract()
+        api = Mock()
+        api.get_space_runtime.return_value = SimpleNamespace(stage="RUNNING")
+        api.space_info.side_effect = [
+            SimpleNamespace(sha="b" * 40, host=verifier.SPACE_ORIGIN),
+            SimpleNamespace(sha="c" * 40, host=verifier.SPACE_ORIGIN),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "deployment.json"
+            with (
+                patch.dict(os.environ, {
+                    "HF_TOKEN": "test-token",
+                    "FACTORY_SOURCE_SHA": "a" * 40,
+                    "FACTORY_PROVIDER_SHA": "b" * 40,
+                    "HF_VERIFY_OUTPUT": str(output),
+                    "HF_VERIFY_INITIAL_DELAY": "0",
+                    "HF_VERIFY_TIMEOUT": "1",
+                }),
+                patch.object(verifier, "HfApi", return_value=api),
+                patch.object(verifier, "_get_json", side_effect=[health, distribution]),
+                patch.object(verifier, "_current_main_sha", return_value="a" * 40),
+            ):
+                result = verifier.main()
+            payload = json.loads(output.read_text(encoding="utf-8"))
+        self.assertEqual(result, 1)
+        self.assertFalse(payload["ok"])
+        self.assertIn("revision does not match", payload["error"])
+
+    def test_private_space_probe_authenticates_only_to_configured_origin(self):
+        response = io.BytesIO(b'{"ok": true}')
+        response.status = 200
+        response.headers = {"Content-Type": "application/json"}
+        opener = Mock()
+        opener.open.return_value = response
+        with patch.object(verifier.urllib.request, "build_opener", return_value=opener):
+            result = verifier._get_json(verifier.SPACE_ORIGIN, "/healthz", token="test-token")
+        self.assertTrue(result["ok"])
+        request = opener.open.call_args.args[0]
+        self.assertEqual(request.get_header("Authorization"), "Bearer test-token")
+        with patch.object(verifier.urllib.request, "build_opener") as build:
+            with self.assertRaises(verifier.TerminalSpaceError):
+                verifier._get_json("https://example.invalid", "/healthz", token="test-token")
+            build.assert_not_called()
+
+    def test_private_space_probe_never_forwards_credentials_on_redirect(self):
+        with self.assertRaisesRegex(RuntimeError, "redirected"):
+            verifier._NoRedirect().redirect_request(None, None, 302, "", {}, "https://example.invalid")
 
     def test_wrong_profile_set_is_rejected(self):
         health, distribution = self.valid_contract()
@@ -100,6 +180,28 @@ class RuntimeVerifierTests(unittest.TestCase):
         self.assertIn("NO_APP_FILE", verifier.TERMINAL_FAILURE_STAGES)
         self.assertIn("RUNNING", verifier.ENDPOINT_STAGES)
         self.assertIn("SLEEPING", verifier.ENDPOINT_STAGES)
+
+    def test_blocked_verification_writes_a_sanitized_receipt(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "deployment.json"
+            with patch.dict(
+                os.environ,
+                {"HF_VERIFY_OUTPUT": str(output)},
+                clear=False,
+            ):
+                result = verifier._record_failure(
+                    "runtime failed?token=super-secret",
+                    {"endpoint_error": "https://example.invalid/?access_token=super-secret"},
+                    "a" * 40,
+                )
+
+            payload = json.loads(output.read_text(encoding="utf-8"))
+
+        self.assertEqual(result, 1)
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["decision"], "BLOCKED")
+        self.assertEqual(payload["github_source_sha"], "a" * 40)
+        self.assertNotIn("super-secret", json.dumps(payload))
 
 
 if __name__ == "__main__":

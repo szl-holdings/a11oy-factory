@@ -150,3 +150,46 @@ python -m a11oy_factory search --q vllm
 
 Formulas never grant authority. Metadata integrity is not runtime safety.
 `UNSIGNED-honest` is not Cosign, Fulcio, Rekor, or an ATO.
+
+## Source quality gate
+
+The always-on pull-request gate installs exactly `package-lock.json` with
+`npm ci`, runs `npm test`, starts the real local Vite server, checks the live
+`/__app-env` contract with `npm run check:auth`, and then typechecks the
+application and executes its production build. A stale lockfile is a hard failure; CI never falls back to a
+mutable install.
+
+`npm test` is the clean-clone contract. It runs the checked-in, autonomous
+Node and TypeScript suites that do not depend on the app-builder authoring
+environment, including the auth-invariant and environment-wrapper units.
+The Python gate separately runs the provider-publisher and Factory suites.
+`npm run test:template` deliberately exposes the broader template
+suite. That suite expects generated `public/__grok` assets, `.grok/skills/og`
+documentation, the shipped `.grok/app-env.json`, and symlink privileges. It is
+therefore an authoring-environment check, not a clean-clone success claim; its
+failures must be repaired or reported, never relabeled as a passing CI gate.
+
+## Hugging Face publication boundary
+
+Merging `main` does not publish the Space. Publication is an explicit
+`workflow_dispatch` operation in `hf-sync.yml` and requires the exact lowercase
+40-character SHA of the current `main` commit. The workflow checks out that
+commit, fetches current `origin/main`, and fails closed unless all three SHAs
+agree. The publisher repeats the Git HEAD/current-main comparison immediately
+before upload, embeds the SHA in the Hugging Face commit message, and generates
+a deterministic provenance record that the rebuilt runtime must expose from
+`/healthz`. Deployment verification fails until that runtime SHA and a final
+current-main readback agree. Provider commits are compare-and-swapped against
+the observed prior Space revision and delete stale files so publication is an
+exact mirror rather than an accumulating overlay.
+
+The workflow reads only the uniquely named
+`HF_FACTORY_PRODUCTION_TOKEN` secret from the `hugging-face-production` GitHub
+environment. That environment must exist, restrict deployment to `main`, and
+require an explicit operator review; a missing or unprotected environment is a
+release blocker. In a solo build, that review is an operator authorization and
+is not mislabeled independent approval. A successful source PR or merge is not
+deployment proof; the workflow separately verifies the resulting Space and
+uploads the runtime evidence artifact. A blocked verification writes a
+sanitized failure receipt, and the workflow retains that receipt even though
+the verification step exits nonzero.
