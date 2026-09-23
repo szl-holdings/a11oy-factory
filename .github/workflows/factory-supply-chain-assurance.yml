@@ -12,6 +12,7 @@ on:
       - "scripts/scan_python_environment.py"
       - "scripts/evaluate_factory_assurance.py"
       - "tests/test_assurance.py"
+      - "tests/test_keyless_signing_workflow_contract.py"
       - ".github/workflows/factory-supply-chain-assurance.yml"
   pull_request:
     paths:
@@ -22,6 +23,7 @@ on:
       - "scripts/scan_python_environment.py"
       - "scripts/evaluate_factory_assurance.py"
       - "tests/test_assurance.py"
+      - "tests/test_keyless_signing_workflow_contract.py"
       - ".github/workflows/factory-supply-chain-assurance.yml"
   schedule:
     - cron: "23 6 * * 1"
@@ -173,14 +175,24 @@ jobs:
             --timeout 45 \
             --retries 4
 
-      - name: Retrieve latest successful runtime-execution proof
+      - name: Retrieve exact-head successful runtime-execution proof
         shell: bash
         run: |
           set -euo pipefail
-          RUN_ID="$(gh api --method GET \
-            "repos/${GITHUB_REPOSITORY}/actions/workflows/vllm-cpu-runtime-execution.yml/runs?branch=main&status=success&per_page=20" \
-            --jq '[.workflow_runs[] | select(.event == "push" or .event == "workflow_dispatch")][0].id')"
-          test -n "$RUN_ID" && test "$RUN_ID" != "null"
+          SOURCE_SHA="$GITHUB_SHA"
+          RUNS_JSON="$(gh api --method GET \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/vllm-cpu-runtime-execution.yml/runs?branch=main&status=success&per_page=100")"
+          RUN_ID="$(jq -r --arg source "$SOURCE_SHA" \
+            '[.workflow_runs[] | select((.event == "push" or .event == "workflow_dispatch") and .head_sha == $source)][0].id // empty' \
+            <<<"$RUNS_JSON")"
+          test -n "$RUN_ID"
+          RUN_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}")"
+          RUN_CONCLUSION="$(jq -r '.conclusion // empty' <<<"$RUN_JSON")"
+          RUN_HEAD_BRANCH="$(jq -r '.head_branch // empty' <<<"$RUN_JSON")"
+          RUN_HEAD_SHA="$(jq -r '.head_sha // empty' <<<"$RUN_JSON")"
+          test "$RUN_CONCLUSION" = "success"
+          test "$RUN_HEAD_BRANCH" = "main"
+          test "$RUN_HEAD_SHA" = "$SOURCE_SHA"
           echo "RUNTIME_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
           mkdir -p dist/assurance/runtime
           gh run download "$RUN_ID" \
@@ -190,7 +202,8 @@ jobs:
           RUNTIME_PROOF="$(find dist/assurance/runtime -type f -name runtime-execution.json -print -quit)"
           test -n "$RUNTIME_PROOF"
           echo "RUNTIME_PROOF=$RUNTIME_PROOF" >> "$GITHUB_ENV"
-          echo "$RUN_ID" > dist/assurance/runtime-workflow-run-id.txt
+          printf '%s\n' "$RUN_ID" > dist/assurance/runtime-workflow-run-id.txt
+          printf '%s\n' "$RUN_HEAD_SHA" > dist/assurance/runtime-workflow-head-sha.txt
 
       - name: Evaluate candidate and stable channels
         env:
@@ -225,6 +238,7 @@ jobs:
               "stable": stable["decision"],
               "stable_issues": stable["counts"]["issues"],
               "runtime_run_id": Path("dist/assurance/runtime-workflow-run-id.txt").read_text().strip(),
+              "runtime_run_head_sha": Path("dist/assurance/runtime-workflow-head-sha.txt").read_text().strip(),
           }, indent=2, sort_keys=True))
           PY
 
@@ -269,6 +283,7 @@ jobs:
             dist/assurance/materialization.json
             dist/assurance/constraints.txt
             dist/assurance/runtime-workflow-run-id.txt
+            dist/assurance/runtime-workflow-head-sha.txt
             dist/assurance/runtime/runtime-execution.json
             dist/assurance/verdicts/*.json
             dist/assurance/distribution/factory.lock.json
@@ -298,5 +313,5 @@ jobs:
             echo "Assurance contracts passed; networked observation is reserved for main, schedule, or explicit dispatch."
           else
             test "$OBSERVE_RESULT" = "success"
-            echo "OSV, license, download-hash, runtime-proof, and channel verdict evidence completed."
+            echo "OSV, license, download-hash, exact-head runtime-proof, and channel verdict evidence completed."
           fi
