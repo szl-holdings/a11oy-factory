@@ -17,6 +17,7 @@ from a11oy_factory.signed_promotion import SIGNING_SUBJECT_SCHEMA, verify_embedd
 
 LOCK_SCHEMA = "a11oy.factory.lock/v1"
 _SHA256_ID = re.compile(r"^sha256:[0-9a-f]{64}$")
+_COMMIT_SHA = re.compile(r"^[0-9a-f]{40}$")
 
 
 def _read(path: Path) -> dict[str, Any]:
@@ -38,6 +39,17 @@ def _require_embedded(value: Mapping[str, Any], label: str) -> str:
     if not verify_embedded_digest(value):
         raise AssuranceError("INVALID_EVIDENCE_DIGEST", f"{label} proof digest does not verify")
     return str(value["proof_sha256"])
+
+
+def _source_revision(value: str) -> str:
+    """Validate the exact GitHub source revision bound by upstream evidence."""
+
+    if _COMMIT_SHA.fullmatch(value) is None:
+        raise AssuranceError(
+            "INVALID_SOURCE_REVISION",
+            "Source revision must be exactly 40 lowercase hexadecimal characters",
+        )
+    return value
 
 
 def _distribution_lock_identity(lock: Mapping[str, Any]) -> str:
@@ -93,6 +105,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--distribution-lock", type=Path, required=True)
     parser.add_argument("--stable-verdict", type=Path, required=True)
     parser.add_argument("--stable-policy", type=Path, required=True)
+    parser.add_argument("--source-sha", required=True)
     parser.add_argument("--output", type=Path, required=True)
     return parser.parse_args()
 
@@ -118,9 +131,9 @@ def main() -> int:
     if policy.get("id") != stable.get("policy_id") or policy.get("channel") != "stable":
         raise AssuranceError("POLICY_BINDING_MISMATCH", "Stable policy does not match the verdict")
     lock_id = _distribution_lock_identity(lock)
+    commit_sha = _source_revision(args.source_sha)
 
     repository = os.environ.get("GITHUB_REPOSITORY", "szl-holdings/a11oy-factory")
-    commit_sha = os.environ.get("GITHUB_SHA", "0" * 40)
     ref = os.environ.get("GITHUB_REF", "refs/heads/main")
     workflow_ref = os.environ.get(
         "GITHUB_WORKFLOW_REF",
