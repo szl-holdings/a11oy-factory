@@ -30,6 +30,7 @@ class KeylessSigningWorkflowContractTests(unittest.TestCase):
     def setUp(self) -> None:
         self.signing = SIGNING_WORKFLOW.read_text(encoding="utf-8")
         self.assurance = ASSURANCE_WORKFLOW.read_text(encoding="utf-8")
+        self.subject_builder = SUBJECT_BUILDER_PATH.read_text(encoding="utf-8")
 
     @staticmethod
     def _resolved_lock() -> dict:
@@ -63,6 +64,38 @@ class KeylessSigningWorkflowContractTests(unittest.TestCase):
     def test_direct_script_invocations_can_import_repository_package(self) -> None:
         self.assertIn("PYTHONPATH: ${{ github.workspace }}", self.signing)
 
+    def test_assurance_requires_runtime_run_exact_source_revision(self) -> None:
+        self.assertIn('SOURCE_SHA="$GITHUB_SHA"', self.assurance)
+        self.assertIn('.head_sha == $source', self.assurance)
+        self.assertIn('test "$RUN_HEAD_SHA" = "$SOURCE_SHA"', self.assurance)
+        self.assertIn("runtime-workflow-head-sha.txt", self.assurance)
+        self.assertIn("per_page=100", self.assurance)
+
+    def test_signing_requires_assurance_run_exact_source_revision(self) -> None:
+        self.assertIn(
+            'TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}',
+            self.signing,
+        )
+        self.assertIn('.head_sha == $source', self.signing)
+        self.assertIn('test "$RUN_HEAD_SHA" = "$SOURCE_SHA"', self.signing)
+        self.assertIn('ref: ${{ steps.resolve.outputs.source_sha }}', self.signing)
+        self.assertIn('--source-sha "$SOURCE_SHA"', self.signing)
+        self.assertIn("assurance-run-head-sha.txt", self.signing)
+
+    def test_signing_crosschecks_runtime_producer_revision(self) -> None:
+        self.assertIn("runtime-workflow-head-sha.txt", self.signing)
+        self.assertIn('= "$SOURCE_SHA"', self.signing)
+
+    def test_signing_subject_source_revision_is_explicit_and_exact(self) -> None:
+        revision = "a" * 40
+        self.assertEqual(SUBJECT_BUILDER._source_revision(revision), revision)
+        for invalid in ("", "a" * 39, "A" * 40, "g" * 40):
+            with self.subTest(invalid=invalid):
+                with self.assertRaises(AssuranceError) as raised:
+                    SUBJECT_BUILDER._source_revision(invalid)
+                self.assertEqual(raised.exception.code, "INVALID_SOURCE_REVISION")
+        self.assertNotIn('os.environ.get("GITHUB_SHA"', self.subject_builder)
+
     def test_signing_subject_consumes_resolver_lock_digest(self) -> None:
         lock = self._resolved_lock()
         self.assertEqual(
@@ -91,9 +124,10 @@ class KeylessSigningWorkflowContractTests(unittest.TestCase):
             SUBJECT_BUILDER._distribution_lock_identity(lock)
         self.assertEqual(raised.exception.code, "LOCK_RECEIPT_BINDING_MISMATCH")
 
-    def test_workflow_watches_this_contract_test(self) -> None:
+    def test_workflows_watch_this_contract_test(self) -> None:
         watched_path = '"tests/test_keyless_signing_workflow_contract.py"'
         self.assertGreaterEqual(self.signing.count(watched_path), 2)
+        self.assertGreaterEqual(self.assurance.count(watched_path), 2)
 
 
 if __name__ == "__main__":

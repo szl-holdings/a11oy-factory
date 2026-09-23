@@ -83,11 +83,44 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Checkout immutable main implementation
+      - name: Resolve exact-head successful assurance evidence run
+        id: resolve
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
+          TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            ASSURANCE_RUN_ID="$TRIGGER_RUN_ID"
+            SOURCE_SHA="$TRIGGER_HEAD_SHA"
+          else
+            SOURCE_SHA="$GITHUB_SHA"
+            RUNS_JSON="$(gh api --method GET \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/factory-supply-chain-assurance.yml/runs?branch=main&status=success&per_page=100")"
+            ASSURANCE_RUN_ID="$(jq -r --arg source "$SOURCE_SHA" \
+              '[.workflow_runs[] | select((.event == "push" or .event == "schedule" or .event == "workflow_dispatch") and .head_sha == $source)][0].id // empty' \
+              <<<"$RUNS_JSON")"
+          fi
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test -n "$ASSURANCE_RUN_ID"
+          RUN_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${ASSURANCE_RUN_ID}")"
+          RUN_CONCLUSION="$(jq -r '.conclusion // empty' <<<"$RUN_JSON")"
+          RUN_HEAD_BRANCH="$(jq -r '.head_branch // empty' <<<"$RUN_JSON")"
+          RUN_HEAD_SHA="$(jq -r '.head_sha // empty' <<<"$RUN_JSON")"
+          test "$RUN_CONCLUSION" = "success"
+          test "$RUN_HEAD_BRANCH" = "main"
+          test "$RUN_HEAD_SHA" = "$SOURCE_SHA"
+          echo "ASSURANCE_RUN_ID=$ASSURANCE_RUN_ID" >> "$GITHUB_ENV"
+          echo "SOURCE_SHA=$SOURCE_SHA" >> "$GITHUB_ENV"
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact assured implementation
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: main
+          ref: ${{ steps.resolve.outputs.source_sha }}
           fetch-depth: 1
 
       - name: Python
@@ -95,32 +128,17 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Resolve successful assurance evidence run
+      - name: Download exact assurance evidence
         shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
           set -euo pipefail
-          if [ "$EVENT_NAME" = "workflow_run" ]; then
-            ASSURANCE_RUN_ID="$TRIGGER_RUN_ID"
-          else
-            ASSURANCE_RUN_ID="$(gh api --method GET \
-              "repos/${GITHUB_REPOSITORY}/actions/workflows/factory-supply-chain-assurance.yml/runs?branch=main&status=success&per_page=20" \
-              --jq '[.workflow_runs[] | select(.event == "push" or .event == "schedule" or .event == "workflow_dispatch")][0].id')"
-          fi
-          test -n "$ASSURANCE_RUN_ID" && test "$ASSURANCE_RUN_ID" != "null"
-          RUN_CONCLUSION="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${ASSURANCE_RUN_ID}" --jq .conclusion)"
-          RUN_HEAD_BRANCH="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${ASSURANCE_RUN_ID}" --jq .head_branch)"
-          test "$RUN_CONCLUSION" = "success"
-          test "$RUN_HEAD_BRANCH" = "main"
-          echo "ASSURANCE_RUN_ID=$ASSURANCE_RUN_ID" >> "$GITHUB_ENV"
           mkdir -p dist/signing/source
           gh run download "$ASSURANCE_RUN_ID" \
             --repo "$GITHUB_REPOSITORY" \
             --name a11oy-factory-supply-chain-assurance \
             --dir dist/signing/source
           printf '%s\n' "$ASSURANCE_RUN_ID" > dist/signing/assurance-run-id.txt
+          printf '%s\n' "$SOURCE_SHA" > dist/signing/assurance-run-head-sha.txt
 
       - name: Locate and verify source evidence
         shell: bash
@@ -128,14 +146,18 @@ jobs:
           set -euo pipefail
           SCAN="$(find dist/signing/source -type f -name python-environment-scan.json -print -quit)"
           RUNTIME_PROOF="$(find dist/signing/source -type f -name runtime-execution.json -print -quit)"
+          RUNTIME_RUN_HEAD_SHA="$(find dist/signing/source -type f -name runtime-workflow-head-sha.txt -print -quit)"
           DISTRIBUTION_LOCK="$(find dist/signing/source -type f -name factory.lock.json -print -quit)"
           INITIAL_STABLE_VERDICT="$(find dist/signing/source -type f -name stable-verdict.json -print -quit)"
           test -n "$SCAN" && test -f "$SCAN"
           test -n "$RUNTIME_PROOF" && test -f "$RUNTIME_PROOF"
+          test -n "$RUNTIME_RUN_HEAD_SHA" && test -f "$RUNTIME_RUN_HEAD_SHA"
+          test "$(tr -d '\r\n' < "$RUNTIME_RUN_HEAD_SHA")" = "$SOURCE_SHA"
           test -n "$DISTRIBUTION_LOCK" && test -f "$DISTRIBUTION_LOCK"
           test -n "$INITIAL_STABLE_VERDICT" && test -f "$INITIAL_STABLE_VERDICT"
           echo "SCAN=$SCAN" >> "$GITHUB_ENV"
           echo "RUNTIME_PROOF=$RUNTIME_PROOF" >> "$GITHUB_ENV"
+          echo "RUNTIME_RUN_HEAD_SHA=$RUNTIME_RUN_HEAD_SHA" >> "$GITHUB_ENV"
           echo "DISTRIBUTION_LOCK=$DISTRIBUTION_LOCK" >> "$GITHUB_ENV"
           echo "INITIAL_STABLE_VERDICT=$INITIAL_STABLE_VERDICT" >> "$GITHUB_ENV"
           # $GITHUB_ENV only propagates to LATER steps; Python in THIS step
@@ -178,6 +200,7 @@ jobs:
             --distribution-lock "$DISTRIBUTION_LOCK" \
             --stable-verdict "$INITIAL_STABLE_VERDICT" \
             --stable-policy factory/policy/assurance-stable.json \
+            --source-sha "$SOURCE_SHA" \
             --output dist/signing/output/assurance-signing-subject.json
           python - <<'PY'
           import json
@@ -301,7 +324,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist/signing/output/source-evidence
-          for variable in SCAN RUNTIME_PROOF DISTRIBUTION_LOCK INITIAL_STABLE_VERDICT; do
+          for variable in SCAN RUNTIME_PROOF RUNTIME_RUN_HEAD_SHA DISTRIBUTION_LOCK INITIAL_STABLE_VERDICT; do
             value="${!variable:-}"
             if [ -n "$value" ] && [ -f "$value" ]; then
               cp "$value" "dist/signing/output/source-evidence/$(basename "$value")"
@@ -309,6 +332,7 @@ jobs:
           done
           cp factory/policy/assurance-stable.json dist/signing/output/source-evidence/assurance-stable.json
           cp dist/signing/assurance-run-id.txt dist/signing/output/source-evidence/assurance-run-id.txt
+          cp dist/signing/assurance-run-head-sha.txt dist/signing/output/source-evidence/assurance-run-head-sha.txt
 
       - name: Upload immutable signing evidence
         if: always()
@@ -342,5 +366,5 @@ jobs:
             echo "Upstream assurance failed; signing correctly remained fail closed."
           else
             test "$SIGN_RESULT" = "success"
-            echo "The assurance subject was keylessly signed, identity-verified, transparency-verified, and receipted."
+            echo "The exact-head assurance subject was keylessly signed, identity-verified, transparency-verified, and receipted."
           fi
