@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit",
     "check:auth": "node scripts/check-auth-invariant.mjs",
     "test": "npm run test:clean",
-    "test:clean": "node --test scripts/browser-smoke-verdict.test.mjs scripts/check-auth-invariant.test.mjs scripts/migration-plan.test.mjs scripts/preview.test.mjs scripts/sign-out-plan.test.mjs scripts/with-app-env.test.mjs scripts/workflow-contract.test.mjs && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/auth/gate-identity.test.ts",
+    "test:clean": "node --test scripts/browser-smoke-verdict.test.mjs scripts/check-auth-invariant.test.mjs scripts/migration-plan.test.mjs scripts/preview.test.mjs scripts/sign-out-plan.test.mjs scripts/with-app-env.test.mjs scripts/workflow-contract.test.mjs scripts/generate-hf-space-inventory.test.mjs && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/auth/gate-identity.test.ts src/lib/hf-space-observation.test.ts",
     "test:template": "node --test scripts/*.test.mjs",
     "lint": "eslint .",
     "format": "prettier --write ."

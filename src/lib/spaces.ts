@@ -1,5 +1,11 @@
 import { cellOverlay, OWNER_ORDER } from "@/lib/admission";
 import { profile } from "@/lib/data/registry";
+import rawHubInventory from "@/lib/data/hf-space-inventory.json";
+import { inventorySummary, observeSpace, validateInventory } from "@/lib/hf-space-observation";
+
+// Whether a configured Space exists on the Hub is read from the generated
+// inventory (scripts/generate-hf-space-inventory.mjs), never from this list.
+const HUB_INVENTORY = validateInventory(rawHubInventory);
 
 export type SpaceVisibility = "public" | "protected" | "private";
 export type SpacePublish = "LIVE" | "PREPARED_NOT_LIVE" | "KEEP" | "MERGE" | "DO_NOT_PUBLISH" | "PUBLISHED_PRIVATE";
@@ -294,11 +300,14 @@ export function spacePlan() {
   const merge = inventory.filter(
     (a) => !configuredIds.has(a.asset_id) && a.recommended_action.startsWith("MERGE"),
   );
+  const hub = inventorySummary(HUB_INVENTORY);
   const live_org_observation = {
     captured_packet6: profile.counts.hf_spaces,
-    live_org_page_2026_08_29: 36,
+    ...hub,
     drift_note:
-      "Packet 6 counted 27 Spaces. The live org page now lists 36. This plan does not scrape Hub and does not mutate Hub.",
+      `Packet 6 counted ${profile.counts.hf_spaces} Spaces. The generated public inventory lists ` +
+      `${hub.public_spaces_observed} public Spaces at ${hub.observed_at}. Private Spaces are not visible ` +
+      "to that read. This plan does not mutate Hub.",
   };
 
   return {
@@ -310,6 +319,7 @@ export function spacePlan() {
     canonical_six: CANONICAL_PUBLIC_SIX,
     configured: SPACE_CONFIGS.map((space) => ({
       ...space,
+      hub_observation: observeSpace(HUB_INVENTORY, space.id),
       overlay: space.vertical_id ? cellOverlay(space.vertical_id) : null,
       yaml: spaceYaml(space),
     })),
