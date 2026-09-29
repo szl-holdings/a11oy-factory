@@ -1,0 +1,40 @@
+{
+  "schema": "a11oy.factory.hf-space-inventory/v1",
+  "observed_at": "2026-09-29T16:09:58Z",
+  "observation_mode": "UNAUTHENTICATED_PUBLIC_API",
+  "endpoints": {
+    "list": "https://huggingface.co/api/spaces?author=SZLHOLDINGS&limit=1000",
+    "org_card": "https://huggingface.co/api/spaces/SZLHOLDINGS/README"
+  },
+  "generator": "scripts/generate-hf-space-inventory.mjs",
+  "public_space_ids": [
+    "SZLHOLDINGS/README",
+    "SZLHOLDINGS/a11oy",
+    "SZLHOLDINGS/ayllu",
+    "SZLHOLDINGS/counsel",
+    "SZLHOLDINGS/david-leads",
+    "SZLHOLDINGS/finance",
+    "SZLHOLDINGS/holographic-unify",
+    "SZLHOLDINGS/immune",
+    "SZLHOLDINGS/immune-lattice",
+    "SZLHOLDINGS/killinchu",
+    "SZLHOLDINGS/llm-router-live",
+    "SZLHOLDINGS/lyte",
+    "SZLHOLDINGS/sentra",
+    "SZLHOLDINGS/szl-atelier",
+    "SZLHOLDINGS/szl-command-lab",
+    "SZLHOLDINGS/szl-constellation",
+    "SZLHOLDINGS/szl-forge-lab",
+    "SZLHOLDINGS/szl-frontier",
+    "SZLHOLDINGS/szl-khipu",
+    "SZLHOLDINGS/szl-model-inference-lab",
+    "SZLHOLDINGS/terra",
+    "SZLHOLDINGS/the-grid",
+    "SZLHOLDINGS/vertical-services",
+    "SZLHOLDINGS/yarqa"
+  ],
+  "limits": [
+    "Only public Spaces are visible to this read. A Space absent here is NOT_OBSERVED: private, or not on the Hub.",
+    "Presence here proves a public Hub repository at observed_at, not a RUNNING runtime."
+  ]
+}

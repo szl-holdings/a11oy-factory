@@ -7,15 +7,17 @@ import { StatusChip } from "@/components/truth-chip";
 import { OWNER_ORDER } from "@/lib/admission";
 import { CANONICAL_PUBLIC_SIX, SPACE_CONFIGS, spacePlan } from "@/lib/spaces";
 
+type ConfiguredSpace = ReturnType<typeof spacePlan>["configured"][number];
+
 export const Route = createFileRoute("/_shell/spaces")({
   component: SpacesPage,
 });
 
 function SpacesPage() {
   const plan = spacePlan();
-  const canonical = SPACE_CONFIGS.filter((s) => s.canonical);
-  const cells = SPACE_CONFIGS.filter((s) => s.vertical_id);
-  const factory = SPACE_CONFIGS.find((s) => s.id.endsWith("/a11oy-factory"));
+  const canonical = plan.configured.filter((s) => s.canonical);
+  const cells = plan.configured.filter((s) => s.vertical_id);
+  const factory = plan.configured.find((s) => s.id.endsWith("/a11oy-factory"));
 
   return (
     <Page
@@ -28,7 +30,10 @@ function SpacesPage() {
         <Stat k="Canonical six" v={String(CANONICAL_PUBLIC_SIX.length)} />
         <Stat k="Configured cards" v={String(SPACE_CONFIGS.length)} />
         <Stat k="Packet 6 Spaces" v={String(plan.inventory_count)} />
-        <Stat k="Live org page" v="36" />
+        <Stat
+          k={`Public Spaces observed ${plan.live_org_observation.observed_at}`}
+          v={String(plan.live_org_observation.public_spaces_observed)}
+        />
       </div>
       <p className="mt-3 text-xs text-subtle">{plan.live_org_observation.drift_note}</p>
 
@@ -105,7 +110,8 @@ function SpacesPage() {
   );
 }
 
-function SpaceCard({ space }: { space: (typeof SPACE_CONFIGS)[number] }) {
+function SpaceCard({ space }: { space: ConfiguredSpace }) {
+  const observed = space.hub_observation;
   return (
     <Card>
       <CardHeader>
@@ -113,12 +119,25 @@ function SpaceCard({ space }: { space: (typeof SPACE_CONFIGS)[number] }) {
           <StatusChip value={space.publish} />
           <Badge variant={space.visibility === "public" ? "warn" : "default"}>{space.visibility}</Badge>
           {space.canonical ? <Badge>canonical</Badge> : null}
+          <Badge title={observed.note} variant={observed.state === "PUBLIC_OBSERVED" ? "pass" : "default"}>
+            {observed.state === "PUBLIC_OBSERVED" ? "on public Hub" : "not observed on public Hub"}
+          </Badge>
         </div>
         <CardTitle className="font-serif">{space.title}</CardTitle>
         <CardDescription className="font-mono text-xs">{space.id}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         <p className="text-muted">{space.card}</p>
+        <p className="text-xs text-subtle">
+          {observed.url ? (
+            <a className="text-accent underline-offset-4 hover:underline" href={observed.url} rel="noreferrer" target="_blank">
+              {observed.url}
+            </a>
+          ) : (
+            observed.note
+          )}{" "}
+          · observed {observed.observed_at}
+        </p>
         <p className="font-mono text-xs text-subtle">
           {space.sdk}
           {space.app_port ? `:${space.app_port}` : ""} · {space.hardware} · {space.recommended_action}

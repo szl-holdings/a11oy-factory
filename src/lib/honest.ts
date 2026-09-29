@@ -73,7 +73,8 @@ export function spacesHealth() {
     schema: "szl.spaces-health/v1",
     counted_in_hub: profile.counts.hf_spaces,
     displayed_on_a11oy_spaces_route: profile.counts.a11oy_spaces_route_displayed,
-    live_org_page: plan.live_org_observation.live_org_page_2026_08_29,
+    public_spaces_observed: plan.live_org_observation.public_spaces_observed,
+    public_spaces_observed_at: plan.live_org_observation.observed_at,
     drift: profile.counts.hf_spaces - profile.counts.a11oy_spaces_route_displayed,
     canonical_public_target: plan.canonical_six,
     configured: plan.configured.map((space) => ({
@@ -81,6 +82,7 @@ export function spacesHealth() {
       visibility: space.visibility,
       publish: space.publish,
       recommended_action: space.recommended_action,
+      hub_observation: space.hub_observation.state,
     })),
     huggingface_token: plan.huggingface_token,
     hub_mutation: plan.hub_mutation,
