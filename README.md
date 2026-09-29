@@ -183,9 +183,13 @@ current-main readback agree. Provider commits are compare-and-swapped against
 the observed prior Space revision and delete stale files so publication is an
 exact mirror rather than an accumulating overlay.
 
-The workflow reads only the uniquely named
+The workflow first requests a Hugging Face Trusted Publisher (OIDC) token scoped
+to `spaces/SZLHOLDINGS/a11oy-factory`, through the organization credential
+selector pinned by commit. Its only fallback is the uniquely named
 `HF_FACTORY_PRODUCTION_TOKEN` secret from the `hugging-face-production` GitHub
-environment. That environment must exist, restrict deployment to `main`, and
+environment; no repository-wide Hugging Face secret is offered to the job. The
+uploaded proof includes the selector's report, which names the credential
+source that was used without recording any token. That environment must exist, restrict deployment to `main`, and
 require an explicit operator review; a missing or unprotected environment is a
 release blocker. In a solo build, that review is an operator authorization and
 is not mislabeled independent approval. A successful source PR or merge is not

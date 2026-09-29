@@ -50,6 +50,8 @@ test("Hugging Face publication is manual, source-bound, and environment-gated", 
   assert.match(sync, /secrets\.HF_FACTORY_PRODUCTION_TOKEN/);
   assert.doesNotMatch(sync, /secrets\.HF_ORG_TOKEN|secrets\.HF_TOKEN/);
   assert.match(sync, /cancel-in-progress: false/);
+  // D3: one lock per Hub asset, never keyed by event.
+  assert.match(sync, /^concurrency:\n  group: hf-write\/space\/SZLHOLDINGS\/a11oy-factory\n  cancel-in-progress: false$/m);
   assert.match(sync, /FACTORY_SOURCE_SHA: \$\{\{ inputs\.source_sha \}\}/);
   assert.match(sync, /ref: \$\{\{ inputs\.source_sha \}\}/);
   assert.match(sync, /\^\[0-9a-f\]\{40\}\$/);
@@ -64,9 +66,30 @@ test("Hugging Face publication is manual, source-bound, and environment-gated", 
     "Prove exact source is current main",
     "git rev-parse HEAD",
     "refs/remotes/origin/main",
+    "Acquire Space publisher credential (Trusted Publisher first)",
     "Publish factory Space",
     "Prove deployed runtime and public API contract",
+    "Remove the ephemeral publisher credential",
   ]);
+});
+
+test("Hugging Face credential is Trusted Publisher first with one environment-scoped fallback", () => {
+  const sync = workflow("hf-sync.yml");
+  const job = sync.split("    steps:", 1)[0];
+
+  assert.match(sync, /^  id-token: write$/m);
+  assert.doesNotMatch(job, /HF_TOKEN/, "no token in the job-wide environment");
+  assert.match(sync, /repository: szl-holdings\/\.github\n\s+ref: [0-9a-f]{40}\n/);
+  assert.match(sync, /--target-repo SZLHOLDINGS\/a11oy-factory/);
+  assert.match(sync, /--oidc-resource spaces\/SZLHOLDINGS\/a11oy-factory/);
+  assert.doesNotMatch(sync, /--allow-create/);
+  // Exactly one secret reference, and only in the selector's fallback slot.
+  assert.equal(sync.match(/secrets\./g)?.length, 1);
+  assert.match(sync, /^          HF_TOKEN_CANDIDATE: \$\{\{ secrets\.HF_FACTORY_PRODUCTION_TOKEN \}\}$/m);
+  // The selector checkout must not survive into the publisher's clean-tree check.
+  requireInOrder(sync, ["rm -rf .shared-github", "python \"$selector\"", "Publish factory Space"]);
+  assert.match(sync, /- name: Remove the ephemeral publisher credential\n\s+if: always\(\)/);
+  assert.match(sync, /\$\{\{ runner\.temp \}\}\/hf-publisher-credential\.json/);
 });
 
 test("publisher has defense-in-depth source checks and runtime provenance", () => {
