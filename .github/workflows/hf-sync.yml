@@ -83,7 +83,7 @@ jobs:
       - name: Install pinned Hugging Face client
         run: >-
           python -m pip install --disable-pip-version-check
-          "huggingface_hub==1.23.0"
+          "huggingface_hub==2.0.0"
 
       - name: Check out the immutable organization credential selector
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

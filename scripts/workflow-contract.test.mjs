@@ -92,6 +92,19 @@ test("Hugging Face credential is Trusted Publisher first with one environment-sc
   assert.match(sync, /\$\{\{ runner\.temp \}\}\/hf-publisher-credential\.json/);
 });
 
+test("Hugging Face client is the single org-pinned version (D6)", () => {
+  const sync = workflow("hf-sync.yml");
+
+  // One exact install of the org pin; no second, looser or older hub spec.
+  const specs = sync.match(/huggingface[_-]hub[^"\s]*/g) ?? [];
+  assert.deepEqual(specs, ["huggingface_hub==2.0.0"]);
+  requireInOrder(sync, [
+    "Install pinned Hugging Face client",
+    '"huggingface_hub==2.0.0"',
+    "Acquire Space publisher credential (Trusted Publisher first)",
+  ]);
+});
+
 test("publisher has defense-in-depth source checks and runtime provenance", () => {
   const publisher = readFileSync(
     join(projectRoot(), ".github", "scripts", "publish_factory_space.py"),
