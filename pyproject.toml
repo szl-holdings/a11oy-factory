@@ -18,5 +18,14 @@ classifiers = [
 [project.scripts]
 a11oy-factory = "a11oy_factory.__main__:main"
 
+[project.urls]
+Homepage = "https://github.com/szl-holdings/a11oy-factory"
+Source = "https://github.com/szl-holdings/a11oy-factory"
+Issues = "https://github.com/szl-holdings/a11oy-factory/issues"
+Changelog = "https://github.com/szl-holdings/a11oy-factory/releases"
+
 [tool.setuptools.packages.find]
 include = ["a11oy_factory*"]
+
+[tool.szl.release]
+import_names = ["a11oy_factory"] # wheel top-level import names; the release gate fails if the built wheel differs
