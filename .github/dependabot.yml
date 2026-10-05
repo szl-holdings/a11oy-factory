@@ -40,10 +40,20 @@ updates:
     labels:
       - "dependencies"
     open-pull-requests-limit: 5
+    # Compiler majors are admitted with a compatible parser migration.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # 1.7 removes the generic OAuth APIs used by the GateIdentity broker.
+      - dependency-name: "better-auth"
+        versions: [">=1.7.0, <1.8.0"]
     groups:
       npm:
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
 
   - package-ecosystem: "docker"
     directory: "/"
