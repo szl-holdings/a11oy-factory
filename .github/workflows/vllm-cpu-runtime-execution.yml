@@ -22,6 +22,17 @@ on:
       - "tests/test_runtime_smoke_contract.py"
       - ".github/workflows/vllm-cpu-runtime-execution.yml"
   workflow_dispatch:
+  workflow_call:
+    outputs:
+      source_sha:
+        description: "Exact source checked out for runtime execution"
+        value: ${{ jobs.execute.outputs.source_sha }}
+      proof_file_sha256:
+        description: "SHA-256 of the retained runtime proof bytes"
+        value: ${{ jobs.execute.outputs.proof_file_sha256 }}
+      artifact_id:
+        description: "Runtime proof artifact in this caller run"
+        value: ${{ jobs.execute.outputs.artifact_id }}
 
 permissions:
   contents: read
@@ -97,6 +108,10 @@ jobs:
     needs: contract
     runs-on: ubuntu-latest
     timeout-minutes: 55
+    outputs:
+      source_sha: ${{ steps.binding.outputs.source_sha }}
+      proof_file_sha256: ${{ steps.binding.outputs.proof_file_sha256 }}
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
     env:
       HF_HOME: /tmp/a11oy-hf-cache
       HF_HUB_DISABLE_TELEMETRY: "1"
@@ -107,6 +122,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ github.sha }}
 
       - name: Python 3.12
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -302,6 +318,35 @@ jobs:
           print(json.dumps(proof, indent=2, sort_keys=True))
           PY
 
+      - name: Bind proof bytes to exact source and caller run
+        id: binding
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          source = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          assert source == os.environ["EXPECTED_SOURCE_SHA"]
+          digest = hashlib.sha256(Path("dist/runtime/runtime-execution.json").read_bytes()).hexdigest()
+          binding = {
+              "schema": "a11oy.factory.runtime-workflow-binding/v1",
+              "source_sha": source,
+              "workflow_run_id": os.environ["GITHUB_RUN_ID"],
+              "workflow_run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "proof_file_sha256": digest,
+          }
+          Path("dist/runtime/runtime-workflow-binding.json").write_text(
+              json.dumps(binding, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+          )
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+              output.write(f"source_sha={source}\nproof_file_sha256={digest}\n")
+          PY
+
       - name: Remove runtime and model bytes after proof capture
         if: always()
         run: |
@@ -309,6 +354,7 @@ jobs:
           rm -rf "$HF_HOME"
 
       - name: Upload scoped runtime-execution proof
+        id: upload
         if: success()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -323,6 +369,7 @@ jobs:
             dist/runtime/SHA256SUMS
             dist/runtime/materialization.json
             dist/runtime/runtime-execution.json
+            dist/runtime/runtime-workflow-binding.json
             dist/runtime/runtime-execution.log
             dist/runtime/pip-install-report.json
             dist/runtime/pip-freeze.txt

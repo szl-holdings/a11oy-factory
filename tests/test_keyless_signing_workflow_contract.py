@@ -65,11 +65,14 @@ class KeylessSigningWorkflowContractTests(unittest.TestCase):
         self.assertIn("PYTHONPATH: ${{ github.workspace }}", self.signing)
 
     def test_assurance_requires_runtime_run_exact_source_revision(self) -> None:
-        self.assertIn('SOURCE_SHA="$GITHUB_SHA"', self.assurance)
-        self.assertIn('.head_sha == $source', self.assurance)
-        self.assertIn('test "$RUN_HEAD_SHA" = "$SOURCE_SHA"', self.assurance)
+        self.assertIn('EXPECTED_SOURCE_SHA: ${{ github.sha }}', self.assurance)
+        self.assertIn('test "$RUNTIME_SOURCE_SHA" = "$EXPECTED_SOURCE_SHA"', self.assurance)
+        self.assertIn('--source-sha "$EXPECTED_SOURCE_SHA"', self.assurance)
+        self.assertIn('--run-id "$GITHUB_RUN_ID"', self.assurance)
+        self.assertIn('--run-attempt "$GITHUB_RUN_ATTEMPT"', self.assurance)
+        self.assertIn('artifact-ids: ${{ needs.runtime.outputs.artifact_id }}', self.assurance)
         self.assertIn("runtime-workflow-head-sha.txt", self.assurance)
-        self.assertIn("per_page=100", self.assurance)
+        self.assertNotIn("vllm-cpu-runtime-execution.yml/runs", self.assurance)
 
     def test_signing_requires_assurance_run_exact_source_revision(self) -> None:
         self.assertIn(
