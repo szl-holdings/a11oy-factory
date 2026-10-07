@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useMountSnapshot } from "@/lib/use-mount-snapshot";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,14 +30,14 @@ export function FrontierWorkbench() {
   const [active, setActive] = useState<(typeof PROGRAM_IDS)[number]>("N1");
   const [tick, setTick] = useState(0);
 
-  async function refresh() {
-    const result = await runFrontierProgram();
-    setRuns(result.runs);
-    setCompiled(result.compiled);
-  }
-
   useEffect(() => {
-    void refresh();
+    let active = true;
+    void runFrontierProgram().then((result) => {
+      if (!active) return;
+      setRuns(result.runs);
+      setCompiled(result.compiled);
+    });
+    return () => { active = false; };
   }, [tick]);
 
   const current = runs?.find((r) => r.item.id === active);
@@ -206,10 +207,7 @@ function ShadowBench() {
   const [promotion, setPromotion] = useState<string | null>(null);
   const scenario = list.find((s) => s.scenario_id === id) ?? list[0];
   const vertical = scenario ? verticalById(scenario.vertical_id) : undefined;
-  const run = useMemo(() => {
-    if (!scenario || !vertical) return null;
-    return shadowCompare(vertical, scenario);
-  }, [scenario, vertical]);
+  const run = scenario && vertical ? shadowCompare(vertical, scenario) : null;
   const current = scenario && vertical ? evaluatePolicy(vertical, scenario, "LOG_ONLY") : null;
 
   if (!scenario || !vertical || !run || !current) {
@@ -279,10 +277,9 @@ function ShadowBench() {
 }
 
 function LedgerBench({ onChange }: { onChange: () => void }) {
-  const [entries, setEntries] = useState<DecisionReceipt[]>([]);
-  useEffect(() => {
-    setEntries(loadLedger().entries.slice().reverse());
-  }, []);
+  const initialLedger = useMountSnapshot(loadLedger);
+  const [updatedEntries, setEntries] = useState<DecisionReceipt[] | null>(null);
+  const entries = updatedEntries ?? initialLedger?.entries.slice().reverse() ?? [];
 
   async function setOutcome(id: string, outcome: OutcomeState) {
     const next = await recordOutcome(id, outcome);

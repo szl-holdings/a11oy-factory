@@ -1,22 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useMountSnapshot } from "@/lib/use-mount-snapshot";
 import { Page } from "@/components/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buildHonest } from "@/lib/honest";
 import { profile, PROFILE_SHA256, snapshot } from "@/lib/data/registry";
 import { validateProfile } from "@/lib/compiler";
-import type { HonestContract } from "@/lib/types";
 
 export const Route = createFileRoute("/_shell/trust")({
   component: TrustPage,
 });
 
 function TrustPage() {
-  const [honest, setHonest] = useState<HonestContract | null>(null);
-  useEffect(() => {
-    setHonest(buildHonest());
-  }, []);
+  const honest = useMountSnapshot(buildHonest);
   const errors = validateProfile();
   return (
     <Page

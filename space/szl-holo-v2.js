@@ -194,19 +194,7 @@
 
   function resolveTheme() {
     return {"id":"a11oy-factory","label":"A11oy Factory","motif":"assembly-circuit","palette":["#0f0715","#24102f","#fff6ff","#bca6c5","#d88cff","#74c6ff"],"source":"space-specific"};
-    const id = surfaceCandidate();
-    const curated = CURATED[id];
-    if (curated) return { id, ...curated, source: "curated" };
 
-    const seed = fnv1a(id);
-    const palette = PALETTES[seed % PALETTES.length];
-    return {
-      id,
-      label: titleCase(id) || "A11oy Space",
-      motif: MOTIFS[(seed >>> 8) % MOTIFS.length],
-      palette,
-      source: "deterministic",
-    };
   }
 
   function applyTheme(theme) {

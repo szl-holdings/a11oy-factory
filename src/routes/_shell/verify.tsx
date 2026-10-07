@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
+import { useMountSnapshot } from "@/lib/use-mount-snapshot";
+import { refreshReceiptSelection, type ReceiptSelection } from "@/lib/receipt-selection";
 import { Page } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,30 +31,25 @@ export const Route = createFileRoute("/_shell/verify")({
 
 function VerifyPage() {
   const { hash } = Route.useSearch();
-  const [paste, setPaste] = useState("");
   const [result, setResult] = useState<VerifyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tick, setTick] = useState(0);
-  const ledger = useMemo(() => loadLedger(), [tick]);
-  const admission = useMemo(() => loadOwnerApproval(), [tick]);
-
-  useEffect(() => {
-    if (!hash) return;
-    const found = ledger.entries.find((e) => e.hash === hash);
-    if (found) {
-      setPaste(JSON.stringify(found, null, 2));
-      return;
-    }
-    const organ = loadOrganLedger().entries.find((e) => e.hash === hash);
-    if (organ) {
-      setPaste(JSON.stringify(organ, null, 2));
-      return;
-    }
-    const owner = loadOwnerApproval();
-    if (owner && owner.hash === hash) {
-      setPaste(JSON.stringify(owner, null, 2));
-    }
-  }, [hash, ledger.entries]);
+  const initialLedger = useMountSnapshot(loadLedger);
+  const [updatedLedger, setLedger] = useState<ReturnType<typeof loadLedger> | null>(null);
+  const ledger = updatedLedger ?? initialLedger;
+  const admission = useMountSnapshot(loadOwnerApproval);
+  const organs = useMountSnapshot(loadOrganLedger);
+  const selected = hash
+    ? ledger?.entries.find((entry) => entry.hash === hash)
+      ?? organs?.entries.find((entry) => entry.hash === hash)
+      ?? (admission?.hash === hash ? admission : null)
+    : null;
+  const [selection, setSelection] = useState<ReceiptSelection>({
+    hash: undefined, entries: undefined, paste: "",
+  });
+  const nextSelection = refreshReceiptSelection(selection, hash, ledger?.entries, selected);
+  if (nextSelection !== selection) setSelection(nextSelection);
+  const paste = nextSelection.paste;
+  const setPaste = (value: string) => setSelection((previous) => ({ ...previous, paste: value }));
 
   async function onVerify() {
     setError(null);
@@ -137,7 +134,7 @@ function VerifyPage() {
                 variant="outline"
                 onClick={() => {
                   clearLedger();
-                  setTick((n) => n + 1);
+                  setLedger(loadLedger());
                   setResult(null);
                 }}
               >
@@ -151,7 +148,7 @@ function VerifyPage() {
             <CardHeader>
               <CardTitle>Local chain</CardTitle>
               <CardDescription>
-                {ledger.entries.length} receipts · backend=localStorage (durable=true, browser-scoped)
+                {(ledger?.entries.length ?? 0)} receipts · backend=localStorage (durable=true, browser-scoped)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -165,7 +162,7 @@ function VerifyPage() {
                   <span className="mt-1 block">owner green light · APPROVED</span>
                 </button>
               )}
-              {ledger.entries
+              {ledger?.entries
                 .slice()
                 .reverse()
                 .slice(0, 6)
@@ -182,7 +179,7 @@ function VerifyPage() {
                 ))}
             </CardContent>
           </Card>
-          {ledger.entries[0] && <ReceiptCard receipt={ledger.entries[ledger.entries.length - 1]} compact />}
+          {ledger?.entries[0] && <ReceiptCard receipt={ledger.entries[(ledger?.entries.length ?? 0) - 1]} compact />}
         </div>
       </div>
     </Page>
