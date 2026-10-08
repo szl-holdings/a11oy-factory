@@ -67,6 +67,8 @@ jobs:
           fi
 
           npm run check:auth -- --dev-url http://127.0.0.1:8080
+      - name: Lint source
+        run: npm run lint
       - name: Typecheck
         run: npm run typecheck
       - name: Build production application
