@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit",
     "check:auth": "node scripts/check-auth-invariant.mjs",
     "test": "npm run test:clean",
-    "test:clean": "node --test scripts/browser-smoke-verdict.test.mjs scripts/check-auth-invariant.test.mjs scripts/migration-plan.test.mjs scripts/preview.test.mjs scripts/sign-out-plan.test.mjs scripts/with-app-env.test.mjs scripts/workflow-contract.test.mjs scripts/generate-hf-space-inventory.test.mjs && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/auth/gate-identity.test.ts src/lib/hf-space-observation.test.ts",
+    "test:clean": "node --test scripts/browser-smoke-verdict.test.mjs scripts/check-auth-invariant.test.mjs scripts/migration-plan.test.mjs scripts/preview.test.mjs scripts/sign-out-plan.test.mjs scripts/with-app-env.test.mjs scripts/workflow-contract.test.mjs scripts/generate-hf-space-inventory.test.mjs && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/auth/gate-identity.test.ts src/lib/hf-space-observation.test.ts src/lib/receipt-selection.test.ts src/lib/use-mount-snapshot.test.ts",
     "test:template": "node --test scripts/*.test.mjs",
     "lint": "eslint .",
     "format": "prettier --write ."
@@ -76,16 +76,16 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.20.0",
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.16.5",
     "@types/pg": "^8.11.10",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
-    "eslint": "^9.20.0",
+    "eslint": "^10.0.1",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.6",
-    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^15.15.0",
     "lightningcss": "^1.28.0",
@@ -94,6 +94,7 @@
     "prettier": "^3.9.9",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.71.0",
-    "vite": "^8.3.2"
+    "vite": "^8.3.2",
+    "lru-cache": "^11.5.3"
   }
 }

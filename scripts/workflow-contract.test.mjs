@@ -22,7 +22,7 @@ function requireInOrder(source, markers) {
 test("CI fails closed and exercises tests, live auth, and typecheck", () => {
   const ci = workflow("ci.yml");
 
-  assert.match(ci, /^  pull_request:\s*$/m);
+  assert.match(ci, /^[ ]{2}pull_request:\s*$/m);
   assert.match(ci, /^\s*run: npm ci\s*$/m);
   assert.doesNotMatch(ci, /npm install/);
   assert.doesNotMatch(ci, /if\s+npm ci|npm ci\s*\|\||continue-on-error/);
@@ -33,6 +33,7 @@ test("CI fails closed and exercises tests, live auth, and typecheck", () => {
     "npm run dev",
     "http://127.0.0.1:8080/__app-env",
     "npm run check:auth",
+    "run: npm run lint",
     "run: npm run typecheck",
     "run: npm run build",
   ]);
@@ -43,15 +44,15 @@ test("CI fails closed and exercises tests, live auth, and typecheck", () => {
 test("Hugging Face publication is manual, source-bound, and environment-gated", () => {
   const sync = workflow("hf-sync.yml");
 
-  assert.match(sync, /^  workflow_dispatch:\s*$/m);
-  assert.doesNotMatch(sync, /^  push:\s*$/m);
-  assert.match(sync, /^      source_sha:\s*$/m);
+  assert.match(sync, /^[ ]{2}workflow_dispatch:\s*$/m);
+  assert.doesNotMatch(sync, /^[ ]{2}push:\s*$/m);
+  assert.match(sync, /^[ ]{6}source_sha:\s*$/m);
   assert.match(sync, /name: hugging-face-production/);
   assert.match(sync, /secrets\.HF_FACTORY_PRODUCTION_TOKEN/);
   assert.doesNotMatch(sync, /secrets\.HF_ORG_TOKEN|secrets\.HF_TOKEN/);
   assert.match(sync, /cancel-in-progress: false/);
   // D3: one lock per Hub asset, never keyed by event.
-  assert.match(sync, /^concurrency:\n  group: hf-write\/space\/SZLHOLDINGS\/a11oy-factory\n  cancel-in-progress: false$/m);
+  assert.match(sync, /^concurrency:\n[ ]{2}group: hf-write\/space\/SZLHOLDINGS\/a11oy-factory\n[ ]{2}cancel-in-progress: false$/m);
   assert.match(sync, /FACTORY_SOURCE_SHA: \$\{\{ inputs\.source_sha \}\}/);
   assert.match(sync, /ref: \$\{\{ inputs\.source_sha \}\}/);
   assert.match(sync, /\^\[0-9a-f\]\{40\}\$/);
@@ -77,7 +78,7 @@ test("Hugging Face credential is Trusted Publisher first with one environment-sc
   const sync = workflow("hf-sync.yml");
   const job = sync.split("    steps:", 1)[0];
 
-  assert.match(sync, /^  id-token: write$/m);
+  assert.match(sync, /^[ ]{2}id-token: write$/m);
   assert.doesNotMatch(job, /HF_TOKEN/, "no token in the job-wide environment");
   assert.match(sync, /repository: szl-holdings\/\.github\n\s+ref: [0-9a-f]{40}\n/);
   assert.match(sync, /--target-repo SZLHOLDINGS\/a11oy-factory/);
@@ -85,7 +86,7 @@ test("Hugging Face credential is Trusted Publisher first with one environment-sc
   assert.doesNotMatch(sync, /--allow-create/);
   // Exactly one secret reference, and only in the selector's fallback slot.
   assert.equal(sync.match(/secrets\./g)?.length, 1);
-  assert.match(sync, /^          HF_TOKEN_CANDIDATE: \$\{\{ secrets\.HF_FACTORY_PRODUCTION_TOKEN \}\}$/m);
+  assert.match(sync, /^[ ]{10}HF_TOKEN_CANDIDATE: \$\{\{ secrets\.HF_FACTORY_PRODUCTION_TOKEN \}\}$/m);
   // The selector checkout must not survive into the publisher's clean-tree check.
   requireInOrder(sync, ["rm -rf .shared-github", "python \"$selector\"", "Publish factory Space"]);
   assert.match(sync, /- name: Remove the ephemeral publisher credential\n\s+if: always\(\)/);

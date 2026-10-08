@@ -1,21 +1,23 @@
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useHydrated } from "@tanstack/react-router";
+import { useMountSnapshot } from "@/lib/use-mount-snapshot";
 import { OWNER_ORDER, ensureOwnerApproval, loadOwnerApproval } from "@/lib/admission";
 import { StatusChip } from "@/components/truth-chip";
 import type { AdmissionReceipt } from "@/lib/types";
 import { shortId } from "@/lib/utils";
 
 export function OwnerOrderBanner({ compact = false }: { compact?: boolean }) {
-  const [receipt, setReceipt] = useState<AdmissionReceipt | null>(null);
+  const hydrated = useHydrated();
+  const existing = useMountSnapshot(loadOwnerApproval);
+  const [created, setReceipt] = useState<AdmissionReceipt | null>(null);
+  const receipt = created ?? existing;
 
   useEffect(() => {
-    const existing = loadOwnerApproval();
-    if (existing) {
-      setReceipt(existing);
-      return;
-    }
-    void ensureOwnerApproval().then(setReceipt);
-  }, []);
+    if (!hydrated || existing) return;
+    let active = true;
+    void ensureOwnerApproval().then((next) => { if (active) setReceipt(next); });
+    return () => { active = false; };
+  }, [hydrated, existing]);
 
   return (
     <aside className="rounded-xl border border-pass/30 bg-pass/5 p-4 sm:p-5">
