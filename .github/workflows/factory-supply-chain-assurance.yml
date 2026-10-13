@@ -17,6 +17,13 @@ on:
       - "scripts/verify_runtime_proof_binding.py"
       - ".github/workflows/vllm-cpu-runtime-execution.yml"
       - "tests/test_keyless_signing_workflow_contract.py"
+      - "a11oy_factory/signed_promotion.py"
+      - "scripts/build_assurance_signing_subject.py"
+      - "scripts/emit_sigstore_proof.py"
+      - "scripts/finalize_signed_promotion.py"
+      - "tests/test_signed_promotion.py"
+      - "factory/signing/**"
+      - ".github/workflows/factory-keyless-signing.yml"
       - ".github/workflows/factory-supply-chain-assurance.yml"
   pull_request:
     paths:
@@ -32,6 +39,13 @@ on:
       - "scripts/verify_runtime_proof_binding.py"
       - ".github/workflows/vllm-cpu-runtime-execution.yml"
       - "tests/test_keyless_signing_workflow_contract.py"
+      - "a11oy_factory/signed_promotion.py"
+      - "scripts/build_assurance_signing_subject.py"
+      - "scripts/emit_sigstore_proof.py"
+      - "scripts/finalize_signed_promotion.py"
+      - "tests/test_signed_promotion.py"
+      - "factory/signing/**"
+      - ".github/workflows/factory-keyless-signing.yml"
       - ".github/workflows/factory-supply-chain-assurance.yml"
   schedule:
     - cron: "23 6 * * 1"
@@ -221,7 +235,7 @@ jobs:
           [[ "$RUNTIME_ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
 
       - name: Download runtime proof from this caller run
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           artifact-ids: ${{ needs.runtime.outputs.artifact_id }}
           path: dist/assurance/runtime
@@ -314,7 +328,7 @@ jobs:
 
       - name: Upload assurance evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: a11oy-factory-supply-chain-assurance
           path: |
