@@ -17,6 +17,13 @@ on:
       - "scripts/verify_runtime_proof_binding.py"
       - ".github/workflows/vllm-cpu-runtime-execution.yml"
       - "tests/test_keyless_signing_workflow_contract.py"
+      - "a11oy_factory/signed_promotion.py"
+      - "scripts/build_assurance_signing_subject.py"
+      - "scripts/emit_sigstore_proof.py"
+      - "scripts/finalize_signed_promotion.py"
+      - "tests/test_signed_promotion.py"
+      - "factory/signing/**"
+      - ".github/workflows/factory-keyless-signing.yml"
       - ".github/workflows/factory-supply-chain-assurance.yml"
   pull_request:
     paths:
@@ -32,6 +39,13 @@ on:
       - "scripts/verify_runtime_proof_binding.py"
       - ".github/workflows/vllm-cpu-runtime-execution.yml"
       - "tests/test_keyless_signing_workflow_contract.py"
+      - "a11oy_factory/signed_promotion.py"
+      - "scripts/build_assurance_signing_subject.py"
+      - "scripts/emit_sigstore_proof.py"
+      - "scripts/finalize_signed_promotion.py"
+      - "tests/test_signed_promotion.py"
+      - "factory/signing/**"
+      - ".github/workflows/factory-keyless-signing.yml"
       - ".github/workflows/factory-supply-chain-assurance.yml"
   schedule:
     - cron: "23 6 * * 1"
