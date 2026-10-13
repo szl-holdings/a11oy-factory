@@ -178,6 +178,9 @@ class RuntimeVerifierTests(unittest.TestCase):
         self.assertIn("BUILD_ERROR", verifier.TERMINAL_FAILURE_STAGES)
         self.assertIn("RUNTIME_ERROR", verifier.TERMINAL_FAILURE_STAGES)
         self.assertIn("NO_APP_FILE", verifier.TERMINAL_FAILURE_STAGES)
+        self.assertIn("CONFIG_ERROR", verifier.TERMINAL_FAILURE_STAGES)
+        self.assertIn("DELETING", verifier.TERMINAL_FAILURE_STAGES)
+        self.assertTrue(verifier.TERMINAL_FAILURE_STAGES.isdisjoint(verifier.ENDPOINT_STAGES))
         self.assertIn("RUNNING", verifier.ENDPOINT_STAGES)
         self.assertIn("SLEEPING", verifier.ENDPOINT_STAGES)
 
