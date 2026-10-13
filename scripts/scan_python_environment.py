@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import importlib.metadata
 import json
+import math
 import os
 import platform
 import re
@@ -14,6 +15,7 @@ import socket
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +24,7 @@ from typing import Any, Iterable, Mapping
 from a11oy_factory.assurance import (
     ASSURANCE_SCAN_SCHEMA,
     OSV_BATCH_ENDPOINT,
+    SEVERITY_ORDER,
     canonical_name,
     digest_json,
     license_status,
@@ -32,6 +35,13 @@ _LICENSE_FILE_RE = re.compile(
     r"(^|/)(licen[cs]e|copying|notice|authors?)([._-].*)?$",
     re.IGNORECASE,
 )
+
+_MAX_OSV_DETAILS = 256
+_MAX_OSV_PAGES = 20
+_MAX_OSV_REQUESTS = 512
+_MAX_OSV_RESPONSE_BYTES = 8 * 1024 * 1024
+_OSV_TOTAL_TIMEOUT = 300.0
+_OSV_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
 
 
 def _sha256_file(path: Path) -> str:
@@ -141,24 +151,66 @@ def _inventory(
     return [packages[name] for name in sorted(packages)]
 
 
-def _post_json(url: str, payload: Mapping[str, Any], timeout: float) -> dict[str, Any]:
+def _request_json(url: str, payload: Mapping[str, Any] | None, timeout: float) -> dict[str, Any]:
     request = urllib.request.Request(
         url,
-        data=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
+        data=json.dumps(payload, separators=(",", ":")).encode("utf-8") if payload is not None else None,
         headers={
             "Accept": "application/json",
             "Content-Type": "application/json",
             "User-Agent": "a11oy-factory-assurance/0.7.0",
         },
-        method="POST",
+        method="POST" if payload is not None else "GET",
     )
     with urllib.request.urlopen(request, timeout=timeout) as response:
         if response.status != 200:
             raise RuntimeError(f"OSV returned HTTP {response.status}")
-        value = json.load(response)
+        raw = response.read(_MAX_OSV_RESPONSE_BYTES + 1)
+        if len(raw) > _MAX_OSV_RESPONSE_BYTES:
+            raise RuntimeError("OSV response exceeded byte limit")
+        value = json.loads(raw)
     if not isinstance(value, dict):
         raise RuntimeError("OSV response was not a JSON object")
     return value
+
+
+def _post_json(url: str, payload: Mapping[str, Any], timeout: float) -> dict[str, Any]:
+    return _request_json(url, payload, timeout)
+
+
+def _get_json(url: str, timeout: float) -> dict[str, Any]:
+    return _request_json(url, None, timeout)
+
+
+def _package_severity(vulnerability: Mapping[str, Any], package_name: str) -> dict[str, Any]:
+    """Use the highest known global or matching PyPI package severity.
+
+    One advisory can describe several packages with different severities. The
+    batch API establishes the version match; conservatively retain the highest
+    severity from all entries for that package without importing another
+    package's score or letting a missing/less severe field mask a critical one.
+    """
+    scopes: list[tuple[str, Mapping[str, Any]]] = [("", vulnerability)]
+    for index, affected in enumerate(vulnerability.get("affected", [])):
+        if not isinstance(affected, Mapping):
+            raise RuntimeError("OSV detail record has malformed affected-package evidence")
+        identity = affected.get("package")
+        if (isinstance(identity, Mapping) and identity.get("ecosystem") == "PyPI"
+                and isinstance(identity.get("name"), str)
+                and canonical_name(identity["name"]) == canonical_name(package_name)):
+            scopes.append((f"affected[{index}].", affected))
+    candidates = []
+    for prefix, scope in scopes:
+        for field in ("severity", "database_specific", "ecosystem_specific"):
+            evidence = vulnerability_severity({field: scope.get(field)})
+            if evidence["label"] != "UNKNOWN":
+                candidates.append(dict(evidence, source=prefix + evidence["source"]))
+    if not candidates:
+        return vulnerability_severity({})
+    return max(candidates, key=lambda evidence: (
+        SEVERITY_ORDER[evidence["label"]],
+        evidence["score"] if evidence["score"] is not None else -1,
+    ))
 
 
 def _query_osv(
@@ -168,6 +220,52 @@ def _query_osv(
     timeout: float,
     retries: int,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    # querybatch returns only ID/modified pairs. Full records must be fetched
+    # before severity, withdrawal, aliases or references can be interpreted.
+    parsed = urllib.parse.urlsplit(endpoint)
+    if (parsed.scheme != "https" or not parsed.hostname or parsed.username
+            or parsed.password or parsed.query or parsed.fragment
+            or not parsed.path.endswith("/querybatch")):
+        raise ValueError("OSV endpoint must be an HTTPS querybatch URL without credentials or query")
+    if not math.isfinite(timeout) or timeout <= 0:
+        raise ValueError("OSV timeout must be finite and positive")
+    retry_limit = min(max(1, retries), 4)
+    detail_endpoint = endpoint.rsplit("/", 1)[0] + "/vulns/"
+    deadline = time.monotonic() + _OSV_TOTAL_TIMEOUT
+    request_count = 0
+    batch_attempts = 0
+    detail_attempts = 0
+    last_error: str | None = None
+
+    def request(url: str, payload: Mapping[str, Any] | None) -> dict[str, Any]:
+        nonlocal request_count, batch_attempts, detail_attempts, last_error
+        for attempt in range(1, retry_limit + 1):
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or request_count >= _MAX_OSV_REQUESTS:
+                raise RuntimeError("OSV request/time budget exhausted before a complete scan")
+            request_count += 1
+            request_timeout = min(timeout, 30.0, remaining)
+            try:
+                if payload is None:
+                    detail_attempts += 1
+                    result = _get_json(url, request_timeout)
+                else:
+                    batch_attempts += 1
+                    result = _post_json(url, payload, request_timeout)
+                if not isinstance(result, dict):
+                    raise RuntimeError("OSV response was not a JSON object")
+                if time.monotonic() >= deadline:
+                    raise RuntimeError("OSV time budget exhausted before a complete scan")
+                return result
+            except (OSError, ValueError, RuntimeError, urllib.error.URLError) as exc:
+                last_error = f"{type(exc).__name__}: {exc}"
+                if attempt < retry_limit:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        break
+                    time.sleep(min(2 ** attempt, 12, remaining))
+        raise RuntimeError(f"OSV request failed before a complete scan: {last_error}")
+
     queries = [
         {
             "package": {"ecosystem": "PyPI", "name": package["name"]},
@@ -175,46 +273,85 @@ def _query_osv(
         }
         for package in packages
     ]
-    last_error: str | None = None
-    response: dict[str, Any] | None = None
-    attempts = 0
-    for attempt in range(1, retries + 1):
-        attempts = attempt
-        try:
-            response = _post_json(endpoint, {"queries": queries}, timeout)
-            break
-        except (OSError, ValueError, RuntimeError, urllib.error.URLError) as exc:
-            last_error = f"{type(exc).__name__}: {exc}"
-            if attempt < retries:
-                time.sleep(min(2 ** attempt, 12))
-    if response is None:
-        raise RuntimeError(f"OSV query failed after {attempts} attempts: {last_error}")
+    matches: list[set[str]] = [set() for _ in packages]
+    tokens: list[set[str]] = [set() for _ in packages]
+    unique_ids: set[str] = set()
+    pending = list(enumerate(queries))
+    page_count = 0
+    while pending:
+        page_count += 1
+        if page_count > _MAX_OSV_PAGES:
+            raise RuntimeError("OSV page budget exhausted before a complete scan")
+        response = request(endpoint, {"queries": [query for _, query in pending]})
+        results = response.get("results")
+        if not isinstance(results, list) or len(results) != len(pending):
+            raise RuntimeError("OSV result cardinality mismatch")
+        next_pending = []
+        for (index, _), result in zip(pending, results, strict=True):
+            if not isinstance(result, Mapping):
+                raise RuntimeError("Malformed OSV batch result")
+            rows = result.get("vulns", [])
+            if not isinstance(rows, list):
+                raise RuntimeError("Malformed OSV vulnerability list")
+            for row in rows:
+                vulnerability_id = row.get("id") if isinstance(row, Mapping) else None
+                if not isinstance(vulnerability_id, str) or not _OSV_ID_RE.fullmatch(vulnerability_id):
+                    raise RuntimeError("Malformed OSV vulnerability ID")
+                matches[index].add(vulnerability_id)
+                unique_ids.add(vulnerability_id)
+                if len(unique_ids) > _MAX_OSV_DETAILS:
+                    raise RuntimeError("OSV detail budget exhausted before a complete scan")
+            token = result.get("next_page_token", "")
+            if not isinstance(token, str):
+                raise RuntimeError("Malformed OSV next-page token")
+            if token:
+                if token in tokens[index]:
+                    raise RuntimeError("OSV pagination repeated a token before a complete scan")
+                tokens[index].add(token)
+                next_pending.append((index, dict(queries[index], page_token=token)))
+        pending = next_pending
 
-    results = response.get("results")
-    if not isinstance(results, list) or len(results) != len(packages):
-        raise RuntimeError(
-            f"OSV result cardinality mismatch: results={len(results) if isinstance(results, list) else None} queries={len(packages)}"
-        )
+    details: dict[str, dict[str, Any]] = {}
+    for vulnerability_id in sorted(unique_ids):
+        detail = request(detail_endpoint + urllib.parse.quote(vulnerability_id, safe=""), None)
+        if detail.get("id") != vulnerability_id:
+            raise RuntimeError("OSV detail ID does not match the batch result")
+        for field in ("modified", "withdrawn"):
+            if field == "withdrawn" and field not in detail:
+                continue
+            value = detail.get(field)
+            try:
+                if not isinstance(value, str):
+                    raise ValueError("timestamp must be a string")
+                instant = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                if instant.utcoffset() is None:
+                    raise ValueError("timestamp must include a time zone")
+            except ValueError as exc:
+                raise RuntimeError(f"OSV detail record has malformed {field} timestamp") from exc
+        if not detail.get("withdrawn") and not isinstance(detail.get("affected"), list):
+            raise RuntimeError("OSV detail record is missing affected-package evidence")
+        aliases = detail.get("aliases", [])
+        references = detail.get("references", [])
+        if not isinstance(aliases, list) or any(not isinstance(alias, str) for alias in aliases):
+            raise RuntimeError("OSV detail record has malformed aliases")
+        if not isinstance(references, list) or any(not isinstance(reference, Mapping) for reference in references):
+            raise RuntimeError("OSV detail record has malformed references")
+        details[vulnerability_id] = detail
 
     vulnerabilities: list[dict[str, Any]] = []
     withdrawn = 0
     seen: set[tuple[str, str, str]] = set()
-    for package, result in zip(packages, results, strict=True):
-        rows = result.get("vulns") if isinstance(result, Mapping) else None
-        if not isinstance(rows, list):
-            continue
-        for vulnerability in rows:
-            if not isinstance(vulnerability, Mapping):
-                continue
+    for package, ids in zip(packages, matches, strict=True):
+        for vulnerability_id in sorted(ids):
+            vulnerability = details[vulnerability_id]
             if vulnerability.get("withdrawn"):
                 withdrawn += 1
                 continue
-            vulnerability_id = str(vulnerability.get("id") or "UNKNOWN")
             key = (package["name"], package["version"], vulnerability_id)
             if key in seen:
                 continue
             seen.add(key)
-            severity = vulnerability_severity(vulnerability)
+            severity = _package_severity(vulnerability, package["name"])
             references = vulnerability.get("references")
             reference_urls = []
             if isinstance(references, list):
@@ -236,6 +373,7 @@ def _query_osv(
                     "summary": vulnerability.get("summary"),
                     "published": vulnerability.get("published"),
                     "modified": vulnerability.get("modified"),
+                    "detail_sha256": digest_json(vulnerability),
                     "severity": severity["label"],
                     "severity_score": severity["score"],
                     "severity_source": severity["source"],
@@ -248,8 +386,13 @@ def _query_osv(
         "ecosystem": "PyPI",
         "complete": True,
         "query_count": len(queries),
-        "result_count": len(results),
-        "attempts": attempts,
+        "result_count": len(matches),
+        "attempts": batch_attempts,
+        "page_count": page_count,
+        "detail_endpoint": detail_endpoint,
+        "detail_count": len(details),
+        "detail_attempts": detail_attempts,
+        "request_count": request_count,
         "withdrawn_matches_ignored": withdrawn,
         "last_error": last_error,
     }
