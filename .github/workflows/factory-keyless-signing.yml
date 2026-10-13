@@ -2,17 +2,6 @@
 name: factory-keyless-signing
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "a11oy_factory/signed_promotion.py"
-      - "scripts/build_assurance_signing_subject.py"
-      - "scripts/emit_sigstore_proof.py"
-      - "scripts/finalize_signed_promotion.py"
-      - "tests/test_signed_promotion.py"
-      - "tests/test_keyless_signing_workflow_contract.py"
-      - "factory/signing/**"
-      - ".github/workflows/factory-keyless-signing.yml"
   pull_request:
     paths:
       - "a11oy_factory/signed_promotion.py"
@@ -23,7 +12,10 @@ on:
       - "tests/test_keyless_signing_workflow_contract.py"
       - "factory/signing/**"
       - ".github/workflows/factory-keyless-signing.yml"
+  # Signing is downstream of assurance completion; a parallel push trigger
+  # races the exact-source artifact producer and cannot establish readiness.
   workflow_run:
+    branches: [main]
     workflows: ["factory-supply-chain-assurance"]
     types: [completed]
   workflow_dispatch:
@@ -34,8 +26,8 @@ permissions:
   id-token: write
 
 concurrency:
-  group: factory-keyless-signing-${{ github.ref }}
-  cancel-in-progress: true
+  group: factory-keyless-signing-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: false
 
 env:
   PYTHONUNBUFFERED: "1"
@@ -88,8 +80,12 @@ jobs:
   sign:
     name: Sign and verify assurance subject
     if: >-
-      github.event_name != 'pull_request' &&
-      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository &&
+       contains(fromJSON('["push","schedule","workflow_dispatch"]'), github.event.workflow_run.event))
     needs: contract
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -108,13 +104,17 @@ jobs:
           if [ "$EVENT_NAME" = "workflow_run" ]; then
             ASSURANCE_RUN_ID="$TRIGGER_RUN_ID"
             SOURCE_SHA="$TRIGGER_HEAD_SHA"
-          else
+          elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            test "$GITHUB_REF" = "refs/heads/main"
             SOURCE_SHA="$GITHUB_SHA"
             RUNS_JSON="$(gh api --method GET \
               "repos/${GITHUB_REPOSITORY}/actions/workflows/factory-supply-chain-assurance.yml/runs?branch=main&status=success&per_page=100")"
             ASSURANCE_RUN_ID="$(jq -r --arg source "$SOURCE_SHA" \
               '[.workflow_runs[] | select((.event == "push" or .event == "schedule" or .event == "workflow_dispatch") and .head_sha == $source)][0].id // empty' \
               <<<"$RUNS_JSON")"
+          else
+            echo "Signing requires completed assurance or an explicit main dispatch" >&2
+            exit 1
           fi
           [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
           test -n "$ASSURANCE_RUN_ID"
@@ -125,6 +125,12 @@ jobs:
           test "$RUN_CONCLUSION" = "success"
           test "$RUN_HEAD_BRANCH" = "main"
           test "$RUN_HEAD_SHA" = "$SOURCE_SHA"
+          test "$(jq -r '.head_repository.full_name // empty' <<<"$RUN_JSON")" = "$GITHUB_REPOSITORY"
+          test "$(jq -r '.path // empty' <<<"$RUN_JSON")" = ".github/workflows/factory-supply-chain-assurance.yml"
+          case "$(jq -r '.event // empty' <<<"$RUN_JSON")" in
+            push|schedule|workflow_dispatch) ;;
+            *) echo "Assurance must originate from a trusted main event" >&2; exit 1 ;;
+          esac
           echo "ASSURANCE_RUN_ID=$ASSURANCE_RUN_ID" >> "$GITHUB_ENV"
           echo "SOURCE_SHA=$SOURCE_SHA" >> "$GITHUB_ENV"
           echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
@@ -366,6 +372,9 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           WORKFLOW_RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          WORKFLOW_RUN_EVENT: ${{ github.event.workflow_run.event }}
+          WORKFLOW_RUN_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WORKFLOW_RUN_REPOSITORY: ${{ github.event.workflow_run.head_repository.full_name }}
           CONTRACT_RESULT: ${{ needs.contract.result }}
           SIGN_RESULT: ${{ needs.sign.result }}
         run: |
@@ -374,9 +383,14 @@ jobs:
           if [ "$EVENT_NAME" = "pull_request" ]; then
             test "$SIGN_RESULT" = "skipped"
             echo "Signing contracts passed; OIDC issuance is reserved for trusted main-branch execution."
-          elif [ "$EVENT_NAME" = "workflow_run" ] && [ "$WORKFLOW_RUN_CONCLUSION" != "success" ]; then
+          elif [ "$EVENT_NAME" = "workflow_run" ] && {
+            [ "$WORKFLOW_RUN_CONCLUSION" != "success" ] ||
+            [ "$WORKFLOW_RUN_BRANCH" != "main" ] ||
+            [ "$WORKFLOW_RUN_REPOSITORY" != "$GITHUB_REPOSITORY" ] ||
+            [[ ! "$WORKFLOW_RUN_EVENT" =~ ^(push|schedule|workflow_dispatch)$ ]];
+          }; then
             test "$SIGN_RESULT" = "skipped"
-            echo "Upstream assurance failed; signing correctly remained fail closed."
+            echo "Upstream assurance was unsuccessful or untrusted; signing remained fail closed."
           else
             test "$SIGN_RESULT" = "success"
             echo "The exact-head assurance subject was keylessly signed, identity-verified, transparency-verified, and receipted."
