@@ -1,8 +1,45 @@
+import re
 import unittest
 from pathlib import Path
 
+README = Path(__file__).resolve().parents[1] / "README.md"
+SPACE_RUNTIME_STATES = ("RUNNING", "PAUSED", "SLEEPING", "STOPPED", "BUILDING", "RUNTIME_ERROR")
+
 
 class HuggingFaceMetadataTests(unittest.TestCase):
+    def test_space_surface_row_states_runtime_and_published_source(self):
+        """The Surfaces row must not list the Space without its observed state.
+
+        Merging main does not publish the Space, so the README has to say what
+        the Space is actually serving: visibility, runtime stage, and the last
+        GitHub source SHA that was published to it.
+        """
+        rows = [
+            line
+            for line in README.read_text(encoding="utf-8").splitlines()
+            if line.startswith("| Hugging Face Space |")
+        ]
+        self.assertEqual(len(rows), 1, "expected exactly one Hugging Face Space surface row")
+        row = rows[0]
+        self.assertIn("`SZLHOLDINGS/a11oy-factory`", row)
+        self.assertRegex(row, r"\b(private|public)\b", "row must state Space visibility")
+        self.assertTrue(
+            any(re.search(rf"\b{state}\b", row) for state in SPACE_RUNTIME_STATES),
+            f"row must state an observed Space runtime stage: {row!r}",
+        )
+        self.assertRegex(
+            row,
+            r"last published source `[0-9a-f]{8,40}`",
+            "row must name the last GitHub source SHA published to the Space",
+        )
+        self.assertIn("hf-sync.yml", row, "row must name the only publication path")
+
+    def test_core_live_heading_is_scoped_to_the_compiler(self):
+        text = README.read_text(encoding="utf-8")
+        section = text.split("## Factory Core v1 — LIVE", 1)[1].split("\n## ", 1)[0]
+        self.assertIn("not a hosted", section)
+
+
     def test_space_frontmatter_is_publishable(self):
         readme = Path(__file__).resolve().parents[1] / "README.md"
         lines = readme.read_text(encoding="utf-8").splitlines()
