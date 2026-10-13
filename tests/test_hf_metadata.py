@@ -1,9 +1,95 @@
+import ast
 import re
 import unittest
 from pathlib import Path
 
-README = Path(__file__).resolve().parents[1] / "README.md"
-SPACE_RUNTIME_STATES = ("RUNNING", "PAUSED", "SLEEPING", "STOPPED", "BUILDING", "RUNTIME_ERROR")
+ROOT = Path(__file__).resolve().parents[1]
+README = ROOT / "README.md"
+VERIFIER = ROOT / ".github" / "scripts" / "verify_factory_space.py"
+SPACE_ROW_PREFIX = "| Hugging Face Space |"
+SPACE_IDENTITY = "`SZLHOLDINGS/a11oy-factory`"
+README_REPORTABLE_FAILURE_STAGES = ("BUILD_ERROR", "CONFIG_ERROR", "NO_APP_FILE", "DELETING")
+# Every stage the verifier can observe (its terminal-failure and endpoint sets,
+# plus BUILDING) is a truthful README report. Reporting is not a health claim.
+SPACE_RUNTIME_STATES = (
+    "RUNNING",
+    "PAUSED",
+    "SLEEPING",
+    "STOPPED",
+    "BUILDING",
+    "RUNTIME_ERROR",
+    *README_REPORTABLE_FAILURE_STAGES,
+)
+
+
+def space_surface_rows(text):
+    return [line for line in text.splitlines() if line.startswith(SPACE_ROW_PREFIX)]
+
+
+def space_row_problems(row):
+    """Return every reason a Hugging Face Space surface row is not a complete status line.
+
+    Accepting a stage here only lets the README report what the Hub observed;
+    deployment health stays with .github/scripts/verify_factory_space.py.
+    """
+    problems = []
+    if SPACE_IDENTITY not in row:
+        problems.append(f"row must name the Space repository {SPACE_IDENTITY}")
+    if not re.search(r"\b(private|public)\b", row):
+        problems.append("row must state Space visibility")
+    if not any(re.search(rf"\b{state}\b", row) for state in SPACE_RUNTIME_STATES):
+        problems.append(f"row must state an observed Space runtime stage: {row!r}")
+    if not re.search(r"last published source `[0-9a-f]{8,40}`", row):
+        problems.append("row must name the last GitHub source SHA published to the Space")
+    if "hf-sync.yml" not in row:
+        problems.append("row must name the only publication path")
+    return problems
+
+
+def fixture_row(
+    stage="PAUSED",
+    *,
+    identity=SPACE_IDENTITY,
+    visibility="private",
+    source="`ff484bf1`",
+    workflow="`hf-sync.yml`",
+):
+    """A synthetic Space row shaped like the checked-in README row."""
+    return (
+        f"{SPACE_ROW_PREFIX} {identity} · Docker · {visibility} · {stage}, observed 2026-10-13"
+        f" · last published source {source} (2026-09-08), behind `main`"
+        f" · publishes only by operator dispatch of {workflow} |"
+    )
+
+
+def verifier_stage_sets():
+    """Read the verifier's stage sets from its source without importing it.
+
+    Importing verify_factory_space.py needs huggingface_hub, so parse the module
+    and literal-evaluate only the two module-level stage-set assignments.
+    """
+    wanted = {"TERMINAL_FAILURE_STAGES", "ENDPOINT_STAGES"}
+    found = {}
+    tree = ast.parse(VERIFIER.read_text(encoding="utf-8"), filename=str(VERIFIER))
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            targets, value = node.targets, node.value
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            targets, value = [node.target], node.value
+        else:
+            continue
+        for target in targets:
+            if isinstance(target, ast.Name) and target.id in wanted:
+                if target.id in found:
+                    raise AssertionError(f"verifier assigns {target.id} more than once")
+                try:
+                    found[target.id] = frozenset(ast.literal_eval(value))
+                except ValueError as exc:
+                    raise AssertionError(f"verifier {target.id} is no longer a literal set") from exc
+    missing = sorted(wanted - found.keys())
+    if missing:
+        raise AssertionError(f"verifier no longer defines literal stage sets: {missing}")
+    return found
 
 
 class HuggingFaceMetadataTests(unittest.TestCase):
@@ -14,25 +100,73 @@ class HuggingFaceMetadataTests(unittest.TestCase):
         the Space is actually serving: visibility, runtime stage, and the last
         GitHub source SHA that was published to it.
         """
-        rows = [
-            line
-            for line in README.read_text(encoding="utf-8").splitlines()
-            if line.startswith("| Hugging Face Space |")
-        ]
+        rows = space_surface_rows(README.read_text(encoding="utf-8"))
         self.assertEqual(len(rows), 1, "expected exactly one Hugging Face Space surface row")
-        row = rows[0]
-        self.assertIn("`SZLHOLDINGS/a11oy-factory`", row)
-        self.assertRegex(row, r"\b(private|public)\b", "row must state Space visibility")
-        self.assertTrue(
-            any(re.search(rf"\b{state}\b", row) for state in SPACE_RUNTIME_STATES),
-            f"row must state an observed Space runtime stage: {row!r}",
-        )
-        self.assertRegex(
-            row,
-            r"last published source `[0-9a-f]{8,40}`",
-            "row must name the last GitHub source SHA published to the Space",
-        )
-        self.assertIn("hf-sync.yml", row, "row must name the only publication path")
+        self.assertEqual(space_row_problems(rows[0]), [])
+
+    def assert_fixture_accepts(self, stage):
+        self.assertEqual(space_row_problems(fixture_row(stage)), [])
+
+    def test_fixture_row_accepts_build_error(self):
+        self.assert_fixture_accepts("BUILD_ERROR")
+
+    def test_fixture_row_accepts_config_error(self):
+        self.assert_fixture_accepts("CONFIG_ERROR")
+
+    def test_fixture_row_accepts_no_app_file(self):
+        self.assert_fixture_accepts("NO_APP_FILE")
+
+    def test_fixture_row_accepts_deleting(self):
+        self.assert_fixture_accepts("DELETING")
+
+    def test_fixture_row_accepts_previously_supported_stages(self):
+        for stage in ("RUNNING", "PAUSED", "SLEEPING", "STOPPED", "BUILDING", "RUNTIME_ERROR"):
+            with self.subTest(stage=stage):
+                self.assert_fixture_accepts(stage)
+
+    def test_metadata_contract_accepts_every_verifier_observed_stage(self):
+        sets = verifier_stage_sets()
+        self.assertIn("RUNNING", sets["ENDPOINT_STAGES"])
+        self.assertIn("RUNTIME_ERROR", sets["TERMINAL_FAILURE_STAGES"])
+        observed = sets["TERMINAL_FAILURE_STAGES"] | sets["ENDPOINT_STAGES"] | {"BUILDING"}
+        self.assertEqual(sorted(observed - set(SPACE_RUNTIME_STATES)), [])
+        for stage in sorted(observed):
+            with self.subTest(stage=stage):
+                self.assert_fixture_accepts(stage)
+
+    def test_readme_reportable_failure_stages_remain_verifier_terminal_failures(self):
+        sets = verifier_stage_sets()
+        for stage in README_REPORTABLE_FAILURE_STAGES:
+            with self.subTest(stage=stage):
+                self.assertIn(stage, sets["TERMINAL_FAILURE_STAGES"])
+                self.assertNotIn(stage, sets["ENDPOINT_STAGES"])
+
+    def test_fixture_row_rejects_missing_unknown_or_malformed_stage(self):
+        for label, stage in (
+            ("no stage", ""),
+            ("unknown stage", "HIBERNATING"),
+            ("lowercase token", "paused"),
+            ("hyphenated token", "BUILD-ERROR"),
+            ("suffixed token", "RUNNINGX"),
+            ("prefixed token", "XDELETING"),
+            ("truncated token", "NO_APP"),
+        ):
+            with self.subTest(case=label):
+                problems = space_row_problems(fixture_row(stage))
+                self.assertEqual(len(problems), 1, problems)
+                self.assertIn("observed Space runtime stage", problems[0])
+
+    def test_fixture_row_rejects_missing_required_fields(self):
+        for label, overrides, expected in (
+            ("identity", {"identity": ""}, "Space repository"),
+            ("visibility", {"visibility": ""}, "visibility"),
+            ("published-source SHA", {"source": ""}, "source SHA"),
+            ("hf-sync.yml", {"workflow": ""}, "publication path"),
+        ):
+            with self.subTest(missing=label):
+                problems = space_row_problems(fixture_row("RUNNING", **overrides))
+                self.assertEqual(len(problems), 1, problems)
+                self.assertIn(expected, problems[0])
 
     def test_core_live_heading_is_scoped_to_the_compiler(self):
         text = README.read_text(encoding="utf-8")
