@@ -14,7 +14,7 @@ to Hub from this repository. Publishing is Immune's job
 | SZLHOLDINGS/lyte-services | public hologram | BIND_AS_A11OY_PACKAGE · not a flagship |
 | SZLHOLDINGS/szl-model-inference-lab | public | KEEP |
 | SZLHOLDINGS/evidence-studio | public hologram | merge sink · one writer |
-| SZLHOLDINGS/a11oy-factory | public hologram | compiler · not a second flagship |
+| SZLHOLDINGS/a11oy-factory | private · PAUSED | compiler · not a second flagship · published only by `hf-sync.yml` operator dispatch |
 
 ## Factory bind
 

@@ -37,6 +37,9 @@ Arm, cloud, edge, and future A11oy/KHIPU hardware that runs them.
 
 ## Factory Core v1 — LIVE
 
+LIVE here means the in-repository CLI/library compiler below; it does not mean
+a hosted Hugging Face Space is running (see [Surfaces](#surfaces)).
+
 The core now performs real, fail-closed work:
 
 - validates catalog and target-profile contracts;
@@ -92,7 +95,7 @@ See [`factory/README.md`](./factory/README.md).
 | Surface | State |
 | --- | --- |
 | GitHub | `szl-holdings/a11oy-factory` · public |
-| Hugging Face Space | `SZLHOLDINGS/a11oy-factory` · Docker |
+| Hugging Face Space | `SZLHOLDINGS/a11oy-factory` · Docker · private · PAUSED (archived: outside the 2026-08-29 keep list of the Hub pin set in `szl-holdings/.github` `huggingface/PINSET.md`) · last published source `ff484bf1` (2026-09-08) · publication only by operator dispatch of `hf-sync.yml` |
 | Factory Core v1 | LIVE · deterministic metadata distribution |
 | Reference profiles | CPU AMD64/ARM64 · CUDA 12.9 AMD64/ARM64 · XPU AMD64 |
 | Lyte window | `szl-holdings/lyte-services` · same compiler, not a flagship |
