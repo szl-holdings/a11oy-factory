@@ -1,9 +1,12 @@
 import copy
 import importlib.util
 import io
+import json
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+
+from a11oy_factory.assurance import ASSURANCE_SCAN_SCHEMA, evaluate_assurance
 
 
 SPEC = importlib.util.spec_from_file_location(
@@ -62,6 +65,51 @@ class PythonEnvironmentScanTests(unittest.TestCase):
         self.assertEqual(rows, [])
         self.assertEqual(meta["withdrawn_matches_ignored"], 1)
         self.assertTrue(meta["complete"])
+
+    def test_severity_is_scoped_to_matching_pypi_package(self):
+        record = detail(affected=[
+            {"package": {"ecosystem": "PyPI", "name": "Alpha_Package"},
+             "severity": [{"type": "CVSS_V3", "score": "9.8"}],
+             "database_specific": {"severity": "LOW"}},
+            {"package": {"ecosystem": "PyPI", "name": "beta"},
+             "ecosystem_specific": {"severity": "HIGH"}},
+            {"package": {"ecosystem": "npm", "name": "gamma"},
+             "ecosystem_specific": {"severity": "CRITICAL"}},
+        ])
+        with patch.object(scanner, "_post_json", return_value={"results": [
+            {"vulns": [summary()]}, {"vulns": [summary()]}, {"vulns": [summary()]}
+        ]}), patch.object(scanner, "_get_json", return_value=record) as get:
+            rows, _ = self.run_query([package("alpha-package"), package("beta"), package("gamma")])
+        observed = {row["package"]: row for row in rows}
+        self.assertEqual(observed["alpha-package"]["severity"], "CRITICAL")
+        self.assertEqual(observed["alpha-package"]["severity_score"], 9.8)
+        self.assertEqual(observed["alpha-package"]["severity_source"], "affected[0].CVSS_V3")
+        self.assertEqual(observed["beta"]["severity"], "HIGH")
+        self.assertEqual(observed["gamma"]["severity"], "UNKNOWN")
+        self.assertEqual(get.call_count, 1)
+        policy = json.loads((Path(__file__).resolve().parents[1] /
+                             "factory/policy/assurance-candidate.json").read_text())
+        scan = {"schema": ASSURANCE_SCAN_SCHEMA, "osv": {"complete": True},
+                "packages": [{"name": name, "version": "1.0", "license_expression": "MIT",
+                              "download_hashes": {"sha256": "a" * 64}}
+                             for name in observed], "vulnerabilities": []}
+        runtime = {"runtime_execution_verified": True, "production_runtime_certified": False}
+        self.assertEqual(evaluate_assurance(scan, runtime, policy)["decision"], "ALLOW")
+        scan["vulnerabilities"] = rows
+        verdict = evaluate_assurance(scan, runtime, policy)
+        self.assertEqual(verdict["decision"], "BLOCKED")
+        self.assertEqual(verdict["counts"]["blocked_vulnerabilities"], 1)
+
+    def test_matching_critical_severity_cannot_be_masked_by_other_fields(self):
+        record = detail(database_specific={"severity": "LOW"}, affected=[
+            {"package": {"ecosystem": "PyPI", "name": "alpha"},
+             "ecosystem_specific": {"severity": "CRITICAL"}},
+            {"package": {"ecosystem": "PyPI", "name": "alpha"},
+             "ecosystem_specific": {"severity": "LOW"}},
+        ])
+        self.assertEqual(scanner._package_severity(record, "alpha")["label"], "CRITICAL")
+        record["severity"] = [{"type": "CVSS_V3", "score": "9.9"}]
+        self.assertEqual(scanner._package_severity(record, "alpha")["score"], 9.9)
 
     def test_empty_result_is_complete_without_details(self):
         with patch.object(scanner, "_post_json", return_value={"results": [{}]}), \

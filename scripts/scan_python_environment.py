@@ -24,6 +24,7 @@ from typing import Any, Iterable, Mapping
 from a11oy_factory.assurance import (
     ASSURANCE_SCAN_SCHEMA,
     OSV_BATCH_ENDPOINT,
+    SEVERITY_ORDER,
     canonical_name,
     digest_json,
     license_status,
@@ -181,6 +182,37 @@ def _get_json(url: str, timeout: float) -> dict[str, Any]:
     return _request_json(url, None, timeout)
 
 
+def _package_severity(vulnerability: Mapping[str, Any], package_name: str) -> dict[str, Any]:
+    """Use the highest known global or matching PyPI package severity.
+
+    One advisory can describe several packages with different severities. The
+    batch API establishes the version match; conservatively retain the highest
+    severity from all entries for that package without importing another
+    package's score or letting a missing/less severe field mask a critical one.
+    """
+    scopes: list[tuple[str, Mapping[str, Any]]] = [("", vulnerability)]
+    for index, affected in enumerate(vulnerability.get("affected", [])):
+        if not isinstance(affected, Mapping):
+            raise RuntimeError("OSV detail record has malformed affected-package evidence")
+        identity = affected.get("package")
+        if (isinstance(identity, Mapping) and identity.get("ecosystem") == "PyPI"
+                and isinstance(identity.get("name"), str)
+                and canonical_name(identity["name"]) == canonical_name(package_name)):
+            scopes.append((f"affected[{index}].", affected))
+    candidates = []
+    for prefix, scope in scopes:
+        for field in ("severity", "database_specific", "ecosystem_specific"):
+            evidence = vulnerability_severity({field: scope.get(field)})
+            if evidence["label"] != "UNKNOWN":
+                candidates.append(dict(evidence, source=prefix + evidence["source"]))
+    if not candidates:
+        return vulnerability_severity({})
+    return max(candidates, key=lambda evidence: (
+        SEVERITY_ORDER[evidence["label"]],
+        evidence["score"] if evidence["score"] is not None else -1,
+    ))
+
+
 def _query_osv(
     packages: list[dict[str, Any]],
     *,
@@ -319,7 +351,7 @@ def _query_osv(
             if key in seen:
                 continue
             seen.add(key)
-            severity = vulnerability_severity(vulnerability)
+            severity = _package_severity(vulnerability, package["name"])
             references = vulnerability.get("references")
             reference_urls = []
             if isinstance(references, list):
