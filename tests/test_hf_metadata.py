@@ -20,6 +20,9 @@ SPACE_RUNTIME_STATES = (
     "RUNTIME_ERROR",
     *README_REPORTABLE_FAILURE_STAGES,
 )
+# The verifier waits through BUILDING: it is neither a terminal failure nor an
+# endpoint stage, so it is the one reportable stage outside the verifier's sets.
+VERIFIER_WAIT_STAGES = frozenset({"BUILDING"})
 
 
 def space_surface_rows(text):
@@ -92,6 +95,29 @@ def verifier_stage_sets():
     return found
 
 
+def stage_contract_drift(contract, verifier_sets):
+    """Compare a README stage contract with every stage the verifier classifies or waits through.
+
+    "unreportable": the verifier can observe it but the README may not state it.
+    "unclassified": the README would accept it but the verifier never classifies it.
+    "duplicated": the contract lists it more than once.
+    """
+    observable = (
+        verifier_sets["TERMINAL_FAILURE_STAGES"]
+        | verifier_sets["ENDPOINT_STAGES"]
+        | VERIFIER_WAIT_STAGES
+    )
+    accepted = set(contract)
+    return {
+        "unreportable": sorted(observable - accepted),
+        "unclassified": sorted(accepted - observable),
+        "duplicated": sorted(stage for stage in accepted if contract.count(stage) > 1),
+    }
+
+
+NO_STAGE_DRIFT = {"unreportable": [], "unclassified": [], "duplicated": []}
+
+
 class HuggingFaceMetadataTests(unittest.TestCase):
     def test_space_surface_row_states_runtime_and_published_source(self):
         """The Surfaces row must not list the Space without its observed state.
@@ -128,11 +154,51 @@ class HuggingFaceMetadataTests(unittest.TestCase):
         sets = verifier_stage_sets()
         self.assertIn("RUNNING", sets["ENDPOINT_STAGES"])
         self.assertIn("RUNTIME_ERROR", sets["TERMINAL_FAILURE_STAGES"])
-        observed = sets["TERMINAL_FAILURE_STAGES"] | sets["ENDPOINT_STAGES"] | {"BUILDING"}
+        observed = sets["TERMINAL_FAILURE_STAGES"] | sets["ENDPOINT_STAGES"] | VERIFIER_WAIT_STAGES
         self.assertEqual(sorted(observed - set(SPACE_RUNTIME_STATES)), [])
         for stage in sorted(observed):
             with self.subTest(stage=stage):
                 self.assert_fixture_accepts(stage)
+
+    def test_readme_stage_contract_equals_verifier_stage_sets(self):
+        """The README contract and the verifier's sets must match in both directions.
+
+        A stage the README could state but the verifier never classifies would
+        let the README report a stage the deployment gate cannot judge.
+        """
+        sets = verifier_stage_sets()
+        self.assertTrue(
+            VERIFIER_WAIT_STAGES.isdisjoint(sets["TERMINAL_FAILURE_STAGES"] | sets["ENDPOINT_STAGES"]),
+            "BUILDING is a wait stage; the verifier must not also classify it",
+        )
+        self.assertEqual(stage_contract_drift(SPACE_RUNTIME_STATES, sets), NO_STAGE_DRIFT)
+
+    def test_stage_contract_drift_flags_extra_missing_and_duplicate_stages(self):
+        sets = verifier_stage_sets()
+        for label, contract, expected in (
+            (
+                "stage the verifier never classifies",
+                (*SPACE_RUNTIME_STATES, "APP_STARTING"),
+                {**NO_STAGE_DRIFT, "unclassified": ["APP_STARTING"]},
+            ),
+            (
+                "verifier terminal stage dropped from the README contract",
+                tuple(stage for stage in SPACE_RUNTIME_STATES if stage != "DELETING"),
+                {**NO_STAGE_DRIFT, "unreportable": ["DELETING"]},
+            ),
+            (
+                "wait stage dropped from the README contract",
+                tuple(stage for stage in SPACE_RUNTIME_STATES if stage != "BUILDING"),
+                {**NO_STAGE_DRIFT, "unreportable": ["BUILDING"]},
+            ),
+            (
+                "stage listed twice",
+                (*SPACE_RUNTIME_STATES, "PAUSED"),
+                {**NO_STAGE_DRIFT, "duplicated": ["PAUSED"]},
+            ),
+        ):
+            with self.subTest(case=label):
+                self.assertEqual(stage_contract_drift(contract, sets), expected)
 
     def test_readme_reportable_failure_stages_remain_verifier_terminal_failures(self):
         sets = verifier_stage_sets()
