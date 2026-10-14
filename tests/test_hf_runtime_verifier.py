@@ -184,6 +184,49 @@ class RuntimeVerifierTests(unittest.TestCase):
         self.assertIn("RUNNING", verifier.ENDPOINT_STAGES)
         self.assertIn("SLEEPING", verifier.ENDPOINT_STAGES)
 
+    def test_terminal_stages_block_deployment_without_endpoint_probe(self):
+        """A README may report these stages, but the deployment gate never treats them as healthy."""
+        stages = sorted(verifier.TERMINAL_FAILURE_STAGES)
+        self.assertLessEqual({"BUILD_ERROR", "CONFIG_ERROR", "NO_APP_FILE", "DELETING"}, set(stages))
+        for stage in stages:
+            with self.subTest(stage=stage):
+                api = Mock()
+                api.get_space_runtime.return_value = SimpleNamespace(stage=stage)
+                api.space_info.return_value = SimpleNamespace(sha="b" * 40, host=verifier.SPACE_ORIGIN)
+                with tempfile.TemporaryDirectory() as directory:
+                    output = Path(directory) / "deployment.json"
+                    summary = Path(directory) / "summary.md"
+                    with (
+                        patch.dict(os.environ, {
+                            "HF_TOKEN": "test-token",
+                            "FACTORY_SOURCE_SHA": "a" * 40,
+                            "FACTORY_PROVIDER_SHA": "b" * 40,
+                            "HF_VERIFY_OUTPUT": str(output),
+                            "GITHUB_STEP_SUMMARY": str(summary),
+                            "HF_VERIFY_INITIAL_DELAY": "0",
+                            "HF_VERIFY_TIMEOUT": "1",
+                        }),
+                        patch.object(verifier, "HfApi", return_value=api),
+                        patch.object(verifier, "_get_json") as probe,
+                        patch.object(verifier, "_current_main_sha") as main_sha,
+                        patch.object(verifier.time, "sleep") as sleep,
+                        patch.object(sys, "stdout", io.StringIO()),
+                        patch.object(sys, "stderr", io.StringIO()) as stderr,
+                    ):
+                        result = verifier.main()
+                    payload = json.loads(output.read_text(encoding="utf-8"))
+                    summary_text = summary.read_text(encoding="utf-8")
+                self.assertEqual(result, 1)
+                self.assertFalse(payload["ok"])
+                self.assertEqual(payload["decision"], "BLOCKED")
+                self.assertIn(f"terminal failure stage {stage}", payload["error"])
+                self.assertEqual(payload["last_observation"]["runtime"]["stage"], stage)
+                self.assertIn("deployment blocked", summary_text)
+                self.assertIn("blocked deployment receipt", stderr.getvalue())
+                probe.assert_not_called()
+                main_sha.assert_not_called()
+                sleep.assert_not_called()
+
     def test_blocked_verification_writes_a_sanitized_receipt(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "deployment.json"
