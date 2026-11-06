@@ -3,7 +3,8 @@ message: If you use this software, please cite it using the metadata from this f
 type: software
 title: szl-holdings/a11oy-factory — Bind as an a11oy package
 version: 0.6.0
-date-released: '2026-11-05'
+# No date-released: 0.6.0 has no GitHub Release, tag or PyPI upload yet
+# (checked 2026-11-06). Add the release date when one is published.
 license: Apache-2.0
 url: https://github.com/szl-holdings/a11oy
 repository-code: https://github.com/szl-holdings/a11oy-factory

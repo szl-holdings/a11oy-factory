@@ -18,3 +18,7 @@ public/__grok
 __pycache__/
 *.py[cod]
 .pytest_cache/
+
+# Python build/install outputs
+*.egg-info/
+build/

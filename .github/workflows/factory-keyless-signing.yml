@@ -20,10 +20,11 @@ on:
     types: [completed]
   workflow_dispatch:
 
+# Least privilege: only the main-branch `sign` job receives an OIDC token and
+# Actions read access; the contract and gate jobs, which also run on pull
+# requests, get neither.
 permissions:
   contents: read
-  actions: read
-  id-token: write
 
 concurrency:
   group: factory-keyless-signing-${{ github.event.workflow_run.head_sha || github.sha }}
@@ -89,6 +90,10 @@ jobs:
     needs: contract
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read      # resolve and download the assurance evidence run
+      id-token: write    # Sigstore keyless signing identity
     env:
       GH_TOKEN: ${{ github.token }}
     steps:

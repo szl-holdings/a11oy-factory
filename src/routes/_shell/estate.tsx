@@ -50,7 +50,7 @@ function EstatePage() {
             </li>
             <li>
               <a className="text-accent underline-offset-4 hover:underline" href="https://huggingface.co/spaces/SZLHOLDINGS/a11oy-factory" rel="noreferrer" target="_blank">SZLHOLDINGS/a11oy-factory</a>
-              {" "}— published private via szl-experiments · not a seventh public Space
+              {" "}— published private by hf-sync.yml operator dispatch · not a seventh public Space
             </li>
             <li>
               <a className="text-accent underline-offset-4 hover:underline" href="https://github.com/szl-holdings/a11oy/issues/1426" rel="noreferrer" target="_blank">a11oy#1426</a>

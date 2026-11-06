@@ -30,6 +30,26 @@ updates:
         patterns:
           - "*"
 
+  # Hash-locked CI tool closures (requirements/ci/*.txt, compiled from *.in).
+  - package-ecosystem: "pip"
+    directory: "/requirements/ci"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 5
+    # huggingface_hub is the org pin (D6) and moves only by explicit decision;
+    # its hash-locked transitive closure is kept current here.
+    ignore:
+      - dependency-name: "huggingface-hub"
+    groups:
+      ci-requirements:
+        patterns:
+          - "*"
+
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -41,12 +61,12 @@ updates:
       - "dependencies"
     open-pull-requests-limit: 5
     # Compiler majors are admitted with a compatible parser migration.
+    # better-auth 1.7 is no longer ignored: the OAuth sign-in path was migrated
+    # to the 1.7 social API (#89) and main runs 1.7.x, so an ignore here would
+    # only block 1.7 security patches (Dependabot reported all_versions_ignored).
     ignore:
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
-      # 1.7 removes the generic OAuth APIs used by the GateIdentity broker.
-      - dependency-name: "better-auth"
-        versions: [">=1.7.0, <1.8.0"]
     groups:
       npm:
         patterns:

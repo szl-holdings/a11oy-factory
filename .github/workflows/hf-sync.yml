@@ -10,8 +10,6 @@ on:
 
 permissions:
   contents: read
-  # Trusted Publisher (OIDC) exchange for spaces/SZLHOLDINGS/a11oy-factory.
-  id-token: write
 
 concurrency:
   group: hf-write/space/SZLHOLDINGS/a11oy-factory
@@ -21,6 +19,10 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      # Trusted Publisher (OIDC) exchange for spaces/SZLHOLDINGS/a11oy-factory.
+      id-token: write
     environment:
       name: hugging-face-production
       url: https://huggingface.co/spaces/SZLHOLDINGS/a11oy-factory
@@ -81,9 +83,11 @@ jobs:
           python-version: "3.12"
 
       - name: Install pinned Hugging Face client
+        # huggingface_hub==2.0.0 and its closure, hash-locked in
+        # requirements/ci/hf-sync.txt (compiled from hf-sync.in).
         run: >-
           python -m pip install --disable-pip-version-check
-          "huggingface_hub==2.0.0"
+          --require-hashes -r requirements/ci/hf-sync.txt
 
       - name: Check out the immutable organization credential selector
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
