@@ -30,6 +30,26 @@ updates:
         patterns:
           - "*"
 
+  # Hash-locked CI tool closures (requirements/ci/*.txt, compiled from *.in).
+  - package-ecosystem: "pip"
+    directory: "/requirements/ci"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 5
+    # huggingface_hub is the org pin (D6) and moves only by explicit decision;
+    # its hash-locked transitive closure is kept current here.
+    ignore:
+      - dependency-name: "huggingface-hub"
+    groups:
+      ci-requirements:
+        patterns:
+          - "*"
+
   - package-ecosystem: "npm"
     directory: "/"
     schedule:

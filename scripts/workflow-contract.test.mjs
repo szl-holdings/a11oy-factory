@@ -78,7 +78,9 @@ test("Hugging Face credential is Trusted Publisher first with one environment-sc
   const sync = workflow("hf-sync.yml");
   const job = sync.split("    steps:", 1)[0];
 
-  assert.match(sync, /^[ ]{2}id-token: write$/m);
+  // The OIDC grant is scoped to the publishing job, never the whole workflow.
+  assert.doesNotMatch(sync, /^[ ]{2}id-token:/m, "no workflow-level id-token grant");
+  assert.match(job, /^[ ]{4}permissions:\n[ ]{6}contents: read\n(?:[ ]{6}#[^\n]*\n)*[ ]{6}id-token: write$/m);
   assert.doesNotMatch(job, /HF_TOKEN/, "no token in the job-wide environment");
   assert.match(sync, /repository: szl-holdings\/\.github\n\s+ref: [0-9a-f]{40}\n/);
   assert.match(sync, /--target-repo SZLHOLDINGS\/a11oy-factory/);
@@ -93,17 +95,37 @@ test("Hugging Face credential is Trusted Publisher first with one environment-sc
   assert.match(sync, /\$\{\{ runner\.temp \}\}\/hf-publisher-credential\.json/);
 });
 
-test("Hugging Face client is the single org-pinned version (D6)", () => {
+test("Hugging Face client is the single org-pinned version (D6), hash-locked", () => {
   const sync = workflow("hf-sync.yml");
+  const uncommented = (text) =>
+    text
+      .split("\n")
+      .filter((line) => !line.trimStart().startsWith("#"))
+      .join("\n");
+  const lockInput = readFileSync(join(projectRoot(), "requirements", "ci", "hf-sync.in"), "utf8");
+  const lock = readFileSync(join(projectRoot(), "requirements", "ci", "hf-sync.txt"), "utf8");
 
-  // One exact install of the org pin; no second, looser or older hub spec.
-  const specs = sync.match(/huggingface[_-]hub[^"\s]*/g) ?? [];
-  assert.deepEqual(specs, ["huggingface_hub==2.0.0"]);
+  // The workflow installs only the hash-locked closure: no second, looser or
+  // older hub spec on any install line.
+  assert.deepEqual(uncommented(sync).match(/huggingface[_-]hub[^"\s]*/g) ?? [], []);
+  assert.match(sync, /--require-hashes -r requirements\/ci\/hf-sync\.txt/);
   requireInOrder(sync, [
     "Install pinned Hugging Face client",
-    '"huggingface_hub==2.0.0"',
+    "--require-hashes -r requirements/ci/hf-sync.txt",
     "Acquire Space publisher credential (Trusted Publisher first)",
   ]);
+
+  // One exact org pin in the lock input and in the compiled lock.
+  assert.deepEqual(uncommented(lockInput).match(/huggingface[_-]hub[^\s]*/g) ?? [], ["huggingface_hub==2.0.0"]);
+  assert.deepEqual(lock.match(/^huggingface[_-]hub==\S+/gm) ?? [], ["huggingface-hub==2.0.0"]);
+
+  // Every locked requirement is exact and carries at least one sha256 hash.
+  const blocks = uncommented(lock).split(/\n(?=\S)/).filter((block) => block.trim());
+  assert.ok(blocks.length > 1, "lock lists the transitive closure");
+  for (const block of blocks) {
+    assert.match(block, /^[A-Za-z0-9._-]+==\S+ \\\n/, `unpinned lock entry: ${block.split("\n")[0]}`);
+    assert.match(block, /--hash=sha256:[0-9a-f]{64}/, `unhashed lock entry: ${block.split("\n")[0]}`);
+  }
 });
 
 test("publisher has defense-in-depth source checks and runtime provenance", () => {

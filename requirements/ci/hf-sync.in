@@ -1,0 +1,7 @@
+# Hugging Face client for .github/workflows/hf-sync.yml (publish + verify the
+# factory Space). huggingface_hub is the single org-pinned version (D6, see
+# scripts/workflow-contract.test.mjs); bump it only by an explicit decision.
+# Recompile the hashed lock with:
+#   uv pip compile --generate-hashes --python-version 3.12 \
+#     requirements/ci/hf-sync.in -o requirements/ci/hf-sync.txt
+huggingface_hub==2.0.0
