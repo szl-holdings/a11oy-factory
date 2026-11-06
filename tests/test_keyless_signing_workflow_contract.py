@@ -138,6 +138,40 @@ class KeylessSigningWorkflowContractTests(unittest.TestCase):
         self.assertGreaterEqual(self.assurance.count(watched_path), 2)
 
     @staticmethod
+    def _permission_grants(block: str, indent: str) -> dict[str, str]:
+        """Scopes of the first ``permissions:`` mapping found at ``indent``."""
+        match = re.search(rf"^{indent}permissions:\n((?:{indent}  \S[^\n]*\n)+)", block, re.M)
+        grants: dict[str, str] = {}
+        for line in match.group(1).splitlines() if match else []:
+            scope, _, level = line.split("#", 1)[0].strip().partition(":")
+            if scope:
+                grants[scope] = level.strip()
+        return grants
+
+    def _job_block(self, job: str) -> str:
+        jobs = self.signing.split("\njobs:\n", 1)[1]
+        match = re.search(rf"^  {job}:\n(.*?)(?=^  [\w-]+:\n|\Z)", jobs, re.M | re.S)
+        self.assertIsNotNone(match, f"job {job!r} is missing")
+        return match.group(1)
+
+    def test_oidc_and_actions_read_are_scoped_to_the_main_only_sign_job(self) -> None:
+        # contract and gate also run on pull requests, so they keep the
+        # read-only workflow default; only the main-only sign job may mint an
+        # OIDC identity or read other workflow runs.
+        workflow_grants = self._permission_grants(self.signing.split("\njobs:\n", 1)[0], "")
+        self.assertEqual(workflow_grants, {"contents": "read"})
+        for job in ("contract", "gate"):
+            grants = self._permission_grants(self._job_block(job), "    ") or workflow_grants
+            self.assertEqual(grants, {"contents": "read"}, job)
+        sign = self._job_block("sign")
+        self.assertEqual(
+            self._permission_grants(sign, "    "),
+            {"contents": "read", "actions": "read", "id-token": "write"},
+        )
+        self.assertIn("github.ref == 'refs/heads/main'", sign)
+        self.assertIn("github.event.workflow_run.head_branch == 'main'", sign)
+
+    @staticmethod
     def _event_block(workflow: str, event: str) -> str:
         header = workflow.split("\npermissions:", 1)[0]
         match = re.search(rf"^  {event}:\n(.*?)(?=^  \w+:|\Z)", header, re.M | re.S)
