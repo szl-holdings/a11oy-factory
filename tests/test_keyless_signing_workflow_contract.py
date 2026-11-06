@@ -138,11 +138,24 @@ class KeylessSigningWorkflowContractTests(unittest.TestCase):
         self.assertGreaterEqual(self.assurance.count(watched_path), 2)
 
     @staticmethod
-    def _permission_grants(block: str, indent: str) -> dict[str, str]:
-        """Scopes of the first ``permissions:`` mapping found at ``indent``."""
-        match = re.search(rf"^{indent}permissions:\n((?:{indent}  \S[^\n]*\n)+)", block, re.M)
+    def _permission_grants(block: str, indent: str) -> dict[str, str] | None:
+        """Grants of the first ``permissions:`` key at ``indent``; None if absent.
+
+        An inline form is kept visible: ``{}`` is no grant, and a scalar such
+        as ``read-all`` or ``write-all`` comes back as ``{"*": scalar}``.
+        """
+        match = re.search(
+            rf"^{indent}permissions:[ \t]*([^\n#]*?)[ \t]*(?:#[^\n]*)?\n((?:{indent}  \S[^\n]*\n)*)",
+            block,
+            re.M,
+        )
+        if not match:
+            return None
+        inline, mapping = match.groups()
+        if inline:
+            return {} if inline == "{}" else {"*": inline}
         grants: dict[str, str] = {}
-        for line in match.group(1).splitlines() if match else []:
+        for line in mapping.splitlines():
             scope, _, level = line.split("#", 1)[0].strip().partition(":")
             if scope:
                 grants[scope] = level.strip()
@@ -161,8 +174,10 @@ class KeylessSigningWorkflowContractTests(unittest.TestCase):
         workflow_grants = self._permission_grants(self.signing.split("\njobs:\n", 1)[0], "")
         self.assertEqual(workflow_grants, {"contents": "read"})
         for job in ("contract", "gate"):
-            grants = self._permission_grants(self._job_block(job), "    ") or workflow_grants
-            self.assertEqual(grants, {"contents": "read"}, job)
+            grants = self._permission_grants(self._job_block(job), "    ")
+            effective = workflow_grants if grants is None else grants
+            # At most contents: read; read-all/write-all or any other scope fails.
+            self.assertLessEqual(effective.items(), {"contents": "read"}.items(), job)
         sign = self._job_block("sign")
         self.assertEqual(
             self._permission_grants(sign, "    "),
