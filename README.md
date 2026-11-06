@@ -38,7 +38,8 @@ Arm, cloud, edge, and future A11oy/KHIPU hardware that runs them.
 ## Factory Core v1 — LIVE
 
 LIVE here means the in-repo CLI and library compiler; it is not a hosted
-service, and the Hugging Face Space is not serving (see [Surfaces](#surfaces)).
+service. The Hugging Face Space is private and runs an older published source
+revision, not `main` (see [Surfaces](#surfaces)).
 
 The core now performs real, fail-closed work:
 
@@ -82,6 +83,7 @@ The initial checked-in catalog is a real upstream release snapshot:
 | Component | Version | Targets | Integrity |
 | --- | --- | --- | --- |
 | PyTorch source | 2.13.0 | all initial Linux targets | release SHA-256 pinned |
+| PyTorch CPU wheel (CPython 3.12) | 2.13.0+cpu | CPU AMD64 | SHA-256 pinned |
 | vLLM CPU wheel | 0.28.0 | AMD64, ARM64 | release SHA-256 pinned |
 | vLLM CUDA wheel | 0.28.0 | CUDA 12.9 AMD64, ARM64 | release SHA-256 pinned |
 | vLLM XPU wheel | 0.28.0 | Intel XPU AMD64 | release SHA-256 pinned |
@@ -90,12 +92,29 @@ Candidate profiles preserve vulnerability state as `UNVERIFIED`; integrity
 proof is not misrepresented as a vulnerability scan or runtime certificate.
 See [`factory/README.md`](./factory/README.md).
 
+## Install and verify
+
+There is no PyPI release yet (checked 2026-11-06; `publish-pypi.yml` runs its
+release gate on Python and packaging changes and publishes only from a GitHub
+Release), so install from a checkout. The package has no runtime dependencies and
+requires Python 3.11 or newer.
+
+```bash
+python -m venv .venv && . .venv/bin/activate
+pip install -e .
+a11oy-factory distro validate   # defaults to factory/catalog.json + the CPU AMD64 profile
+
+python -m unittest discover -s tests -p "test_*.py"   # Factory Python contracts
+python .github/scripts/test_publish_factory_space.py  # Space publisher fail-closed contract
+npm ci && npm test                                     # console clean-clone contract (Node 22)
+```
+
 ## Surfaces
 
 | Surface | State |
 | --- | --- |
 | GitHub | `szl-holdings/a11oy-factory` · public |
-| Hugging Face Space | `SZLHOLDINGS/a11oy-factory` · Docker · private · PAUSED, not serving (observed 2026-10-13; archive = pause + private per `szl-holdings/.github` `huggingface/PINSET.md`) · last published source `ff484bf1` (2026-09-08), behind `main` · publishes only by operator dispatch of `hf-sync.yml` |
+| Hugging Face Space | `SZLHOLDINGS/a11oy-factory` · Docker · private · RUNNING on cpu-basic per the Hub runtime API, observed 2026-11-06 (it was PAUSED when observed 2026-10-13); private, so not publicly reachable · last published source `ff484bf1` (2026-09-08), behind `main` · the Hub README also carries an estate-card block that was edited on the Hub, not published from GitHub · publishes only by operator dispatch of `hf-sync.yml` |
 | Factory Core v1 | LIVE · deterministic metadata distribution |
 | Reference profiles | CPU AMD64/ARM64 · CUDA 12.9 AMD64/ARM64 · XPU AMD64 |
 | Lyte window | `szl-holdings/lyte-services` · same compiler, not a flagship |
@@ -171,8 +190,8 @@ Formulas never grant authority. Metadata integrity is not runtime safety.
 
 The always-on pull-request gate installs exactly `package-lock.json` with
 `npm ci`, runs `npm test`, starts the real local Vite server, checks the live
-`/__app-env` contract with `npm run check:auth`, and then typechecks the
-application and executes its production build. A stale lockfile is a hard failure; CI never falls back to a
+`/__app-env` contract with `npm run check:auth`, and then lints and typechecks
+the application and executes its production build. A stale lockfile is a hard failure; CI never falls back to a
 mutable install.
 
 `npm test` is the clean-clone contract. It runs the checked-in, autonomous

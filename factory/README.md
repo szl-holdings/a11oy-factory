@@ -23,6 +23,8 @@ inputs and policy violations fail closed.
 The initial catalog is a real upstream release snapshot, not placeholder data:
 
 - PyTorch `2.13.0` source distribution, pinned by its published SHA-256.
+- PyTorch `2.13.0+cpu` wheel for CPython 3.12 on Linux AMD64, pinned by
+  SHA-256; the Linux AMD64 CPU vLLM wheel requires it.
 - vLLM `0.28.0` release wheels for:
   - Linux AMD64 CPU;
   - Linux ARM64 CPU;
