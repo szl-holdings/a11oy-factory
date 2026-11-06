@@ -213,3 +213,5 @@ deployment proof; the workflow separately verifies the resulting Space and
 uploads the runtime evidence artifact. A blocked verification writes a
 sanitized failure receipt, and the workflow retains that receipt even though
 the verification step exits nonzero.
+
+Estate on Hugging Face: models, datasets and Spaces are published under the [SZLHOLDINGS](https://huggingface.co/SZLHOLDINGS) org.
