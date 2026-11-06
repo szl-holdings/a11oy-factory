@@ -114,7 +114,7 @@ npm ci && npm test                                     # console clean-clone con
 | Surface | State |
 | --- | --- |
 | GitHub | `szl-holdings/a11oy-factory` · public |
-| Hugging Face Space | `SZLHOLDINGS/a11oy-factory` · Docker · private · RUNNING on cpu-basic per the Hub runtime API, observed 2026-11-06 (it was PAUSED when observed 2026-10-13); private, so not publicly reachable · last published source `ff484bf1` (2026-09-08), behind `main` · the Hub README also carries an estate-card block that was edited on the Hub, not published from GitHub · publishes only by operator dispatch of `hf-sync.yml` |
+| Hugging Face Space | `SZLHOLDINGS/a11oy-factory` · Docker · private · RUNNING on cpu-basic per the Hub runtime API, observed 2026-11-06 (it was PAUSED when observed 2026-10-13); private, so not publicly reachable · the org pinset (`szl-holdings/.github` `huggingface/PINSET.md`) keeps seven public Spaces and archives the rest as pause + private; this Space is not a keep, so RUNNING is drift from that policy for the owner to resolve (re-pause it or update the pinset) · last published source `ff484bf1` (2026-09-08), behind `main` · the Hub README also carries an estate-card block that was edited on the Hub, not published from GitHub · publishes only by operator dispatch of `hf-sync.yml` |
 | Factory Core v1 | LIVE · deterministic metadata distribution |
 | Reference profiles | CPU AMD64/ARM64 · CUDA 12.9 AMD64/ARM64 · XPU AMD64 |
 | Lyte window | `szl-holdings/lyte-services` · same compiler, not a flagship |
