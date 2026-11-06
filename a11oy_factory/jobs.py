@@ -214,7 +214,8 @@ JOBS: tuple[Job, ...] = (
         id="lattice",
         title="Defense overlay",
         leader="immune-lattice",
-        url="https://github.com/szl-holdings/immune-lattice",
+        # immune-lattice is archived; its kernel now lives in szl-holdings/immune (python/).
+        url="https://github.com/szl-holdings/immune/tree/main/python",
         organ="immune",
         cell="N5",
         honesty="LIVE",
@@ -394,7 +395,8 @@ JOBS: tuple[Job, ...] = (
         id="energy",
         title="Measured joule channel",
         leader="Intel RAPL / NVIDIA NVML",
-        url="https://github.com/szl-holdings/governed-inference-meter",
+        # governed-inference-meter is archived; the meter now lives in szl-energy-attest.
+        url="https://github.com/szl-holdings/szl-energy-attest",
         organ="nervous",
         cell="N13",
         honesty="UNAVAILABLE",

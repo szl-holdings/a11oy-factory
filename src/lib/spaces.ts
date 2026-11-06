@@ -169,7 +169,7 @@ export const SPACE_CONFIGS: SpaceConfig[] = [
     vertical_id: null,
     source: OWNER_ORDER.github.url,
     recommended_action: "BIND_AS_A11OY_PACKAGE",
-    card: "Private Docker Space published via szl-experiments sibling publisher. Not a second flagship. Not a seventh public Space.",
+    card: "Private Docker Space published from szl-holdings/a11oy-factory by operator dispatch of hf-sync.yml. Not a second flagship. Not a seventh public Space.",
     limitations: [
       ...SHARED_LIMITS,
       "Must remain protected. Do not pin on the org front door.",
@@ -314,8 +314,8 @@ export function spacePlan() {
     schema: "szl.space-release-plan/v1" as const,
     owner_order_id: OWNER_ORDER.order_id,
     factory_repo: OWNER_ORDER.github.factory_repo,
-    huggingface_token: "PRESENT_ON_SZL_EXPERIMENTS",
-    hub_mutation: "published-private-via-szl-experiments",
+    huggingface_token: "TRUSTED_PUBLISHER_OIDC_FIRST; FALLBACK HF_FACTORY_PRODUCTION_TOKEN IN hugging-face-production ENVIRONMENT",
+    hub_mutation: "published-private-via-hf-sync-dispatch",
     canonical_six: CANONICAL_PUBLIC_SIX,
     configured: SPACE_CONFIGS.map((space) => ({
       ...space,
@@ -327,6 +327,6 @@ export function spacePlan() {
     inventory_count: inventory.length,
     live_org_observation,
     truth:
-      "Factory Space SZLHOLDINGS/a11oy-factory is published private via szl-experiments. Lyte is protected, not public. a11oy-factory is a package bind, not a seventh public Space. Docker metadata is fetching — not a production certificate.",
+      "Factory Space SZLHOLDINGS/a11oy-factory is private and published from this repository only by operator dispatch of hf-sync.yml. Lyte is protected, not public. a11oy-factory is a package bind, not a seventh public Space. Runtime state is read from the Hub, not asserted here — not a production certificate.",
   };
 }

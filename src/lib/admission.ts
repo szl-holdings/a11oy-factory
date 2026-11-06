@@ -25,9 +25,9 @@ export const OWNER_ORDER = {
     intended_space: "SZLHOLDINGS/a11oy-factory",
     sdk: "docker",
     status: "PUBLISHED_PRIVATE",
-    blocker: "Hub card exists. Docker is fetching metadata. Not a production certificate. Not a seventh public Space.",
+    blocker: "Hub card exists. Not a production certificate. Not a seventh public Space.",
     url: "https://huggingface.co/spaces/SZLHOLDINGS/a11oy-factory",
-    published_via: "szl-holdings/szl-experiments publish-sibling-spaces",
+    published_via: "szl-holdings/a11oy-factory .github/workflows/hf-sync.yml (operator dispatch)",
   },
   still_prohibits: [
     "new top-level product name",
@@ -58,7 +58,7 @@ export const OWNER_ORDER = {
   truth_boundary: [
     "Packet 6 snapshot remains the captured estate evidence.",
     "This factory source is published at szl-holdings/a11oy-factory.",
-    "Hugging Face Space SZLHOLDINGS/a11oy-factory is published private via szl-experiments. Docker metadata is fetching; this is not a production certificate.",
+    "Hugging Face Space SZLHOLDINGS/a11oy-factory is private and published from this repository only by operator dispatch of hf-sync.yml (the earlier szl-experiments sibling publisher is archived). Its runtime state is read from the Hub, not asserted here; this is not a production certificate.",
     "Formulas still never grant authority.",
     "Killinchu remains the only public synthetic reference.",
     "Green light is an owner admission decision. a-11-oy.com is certified LIVE_PRODUCT_ORIGIN from measured probes; DSSE signing and FedRAMP remain uncertified.",
