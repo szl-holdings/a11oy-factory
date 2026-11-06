@@ -4,9 +4,33 @@ import argparse
 import json
 
 from .compiler import compile_cell
+from .distribution_common import FactoryError
 from .distro_cli import add_distribution_parser, run_distribution_command
 from .jobs import search_jobs
 from .organs import act, roadmap
+
+
+def _act_payload(raw: str) -> dict:
+    """Parse ``act --payload``; malformed or non-object input fails closed.
+
+    The payload digest is recorded in the act receipt, so silently replacing
+    bad input with ``{}`` would receipt something the caller never sent.
+    """
+    try:
+        payload = json.loads(raw or "{}")
+    except json.JSONDecodeError as exc:
+        raise FactoryError(
+            "invalid_json",
+            "--payload must be a JSON object.",
+            details={"line": exc.lineno, "column": exc.colno, "message": exc.msg},
+        ) from exc
+    if not isinstance(payload, dict):
+        raise FactoryError(
+            "invalid_payload",
+            "--payload must be a JSON object.",
+            details={"type": type(payload).__name__},
+        )
+    return payload
 
 
 def main() -> int:
@@ -46,10 +70,11 @@ def main() -> int:
         return 0
     if args.cmd == "act":
         try:
-            payload = json.loads(args.payload or "{}")
-        except json.JSONDecodeError:
-            payload = {}
-        rec = act(args.cell, payload if isinstance(payload, dict) else {})
+            payload = _act_payload(args.payload)
+        except FactoryError as exc:
+            print(json.dumps(exc.as_dict(), indent=2, sort_keys=True))
+            return 2
+        rec = act(args.cell, payload)
         print(json.dumps(rec, indent=2))
         return 0 if rec.get("ok") else 2
 
