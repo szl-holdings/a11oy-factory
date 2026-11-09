@@ -9,6 +9,7 @@ pinned: false
 license: apache-2.0
 suggested_hardware: cpu-basic
 short_description: Governed AI distribution with verifiable proof.
+source_repo: https://github.com/szl-holdings/a11oy-factory
 ---
 
 # A11oy Factory

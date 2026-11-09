@@ -261,6 +261,10 @@ class HuggingFaceMetadataTests(unittest.TestCase):
         self.assertEqual(metadata.get("title"), "A11oy Factory")
         self.assertEqual(metadata.get("sdk"), "docker")
         self.assertEqual(metadata.get("app_port"), "7860")
+        self.assertEqual(
+            metadata.get("source_repo"),
+            "https://github.com/szl-holdings/a11oy-factory",
+        )
         description = metadata.get("short_description", "")
         self.assertTrue(description, "short_description is required")
         self.assertLessEqual(
