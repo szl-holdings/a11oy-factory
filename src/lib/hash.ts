@@ -6,7 +6,9 @@ function sortValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(sortValue);
   if (value && typeof value === "object") {
     const obj = value as Record<string, unknown>;
-    const out: Record<string, unknown> = {};
+    // Null-prototype target: a "__proto__" key must stay an own, hashed member
+    // instead of invoking the Object.prototype.__proto__ setter and vanishing.
+    const out = Object.create(null) as Record<string, unknown>;
     for (const key of Object.keys(obj).sort()) {
       out[key] = sortValue(obj[key]);
     }
