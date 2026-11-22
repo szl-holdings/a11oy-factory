@@ -222,7 +222,10 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path.rstrip("/") or "/"
         dynamic = path.startswith("/api/roadmap/") or path.startswith("/api/distribution/profiles/")
         ok = path in HTML_PATHS or path in STATIC_JSON_PATHS or dynamic
-        self.send_response(200 if ok else 404)
+        # HEAD also refuses an unbound source, as GET /readyz does.
+        # Route existence alone is not release-readiness evidence.
+        ready = _source_provenance().get("state") == "BOUND" if path == "/readyz" else True
+        self.send_response(503 if path == "/readyz" and not ready else 200 if ok else 404)
         self.send_header(
             "Content-Type",
             "text/html; charset=utf-8" if path in HTML_PATHS else "application/json; charset=utf-8",
@@ -241,10 +244,13 @@ class Handler(BaseHTTPRequestHandler):
             if path in ("/health", "/healthz", "/readyz"):
                 catalog = _catalog()
                 profiles = _profile_summaries(catalog)
+                provenance = _source_provenance()
+                # Separate process health from a deployable, source-bound package.
+                source_bound = provenance.get("state") == "BOUND"
                 self._json(
-                    200,
+                    503 if path == "/readyz" and not source_bound else 200,
                     {
-                        "ok": True,
+                        "ok": source_bound if path == "/readyz" else True,
                         "service": "a11oy-factory",
                         "version": "0.6.0",
                         "bind": "BIND_AS_A11OY_PACKAGE",
@@ -254,7 +260,7 @@ class Handler(BaseHTTPRequestHandler):
                             "profiles": len(profiles),
                             "runtime_certified": False,
                         },
-                        "source_provenance": _source_provenance(),
+                        "source_provenance": provenance,
                         "decision_cells": {
                             "admitted": ["lyte"],
                             "roadmap": "STARTED",
