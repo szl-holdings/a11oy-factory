@@ -162,6 +162,26 @@ class RuntimeVerifierTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "redirected"):
             verifier._NoRedirect().redirect_request(None, None, 302, "", {}, "https://example.invalid")
 
+    def test_probe_rejects_ambiguous_provider_json(self):
+        malformed = {
+            "duplicate-root": b'{"ok": true, "ok": false}',
+            "duplicate-nested": b'{"ok": true, "factory_core": {"state": "LIVE", "state": "BLOCKED"}}',
+            "nan": b'{"ok": NaN}',
+            "infinity": b'{"ok": Infinity}',
+            "negative-infinity": b'{"ok": -Infinity}',
+            "float-overflow": b'{"ok": 1e999}',
+        }
+        for name, payload in malformed.items():
+            with self.subTest(name=name):
+                response = io.BytesIO(payload)
+                response.status = 200
+                response.headers = {"Content-Type": "application/json"}
+                opener = Mock()
+                opener.open.return_value = response
+                with patch.object(verifier.urllib.request, "build_opener", return_value=opener):
+                    with self.assertRaises(ValueError):
+                        verifier._get_json(verifier.SPACE_ORIGIN, "/healthz")
+
     def test_wrong_profile_set_is_rejected(self):
         health, distribution = self.valid_contract()
         distribution["profiles"] = distribution["profiles"][:-1]
