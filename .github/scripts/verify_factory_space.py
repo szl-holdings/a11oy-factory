@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import subprocess
@@ -70,6 +71,26 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         raise RuntimeError("Space verification endpoint redirected; request blocked.")
 
 
+def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Deployment verifier rejected duplicate JSON keys.")
+        result[key] = value
+    return result
+
+
+def _reject_nonstandard_json_constant(_value: str) -> None:
+    raise ValueError("Deployment verifier rejected nonstandard JSON constants.")
+
+
+def _finite_json_float(value: str) -> float:
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError("Deployment verifier rejected non-finite JSON numbers.")
+    return number
+
+
 def _get_json(
     base_url: str,
     path: str,
@@ -101,7 +122,12 @@ def _get_json(
             raise RuntimeError(f"{path} returned HTTP {response.status}.")
         if "json" not in content_type.lower():
             raise RuntimeError(f"{path} returned unexpected content type {content_type!r}.")
-        value = json.load(response)
+        value = json.load(
+            response,
+            object_pairs_hook=_reject_duplicate_keys,
+            parse_constant=_reject_nonstandard_json_constant,
+            parse_float=_finite_json_float,
+        )
     if not isinstance(value, dict):
         raise RuntimeError(f"{path} did not return a JSON object.")
     return value
